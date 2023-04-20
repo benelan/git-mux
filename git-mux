@@ -40,16 +40,20 @@ has_tmux_server() {
 }
 
 tmux_create_if_needed_and_attach() {
-    project_path="${1:-$HOME}"
-    project_name="$(sanitize_name "$project_path")"
-    debugger "project > creating/attaching to \"$project_name\" at path \"$project_path\""
+    project_name="$(sanitize_name "$1")"
     if in_tmux; then
         if ! tmux_session_exists "$project_name"; then
-            tmux new-session -Ad -s "$project_name" -c "$project_path"
+            debugger "project > creating \"$project_name\" at path \"$1\""
+            tmux new-session -Adc "$1" -s "$project_name"
         fi
+        debugger "project > switching to \"$project_name\" at path \"$1\""
         tmux switch-client -t "$project_name"
+    elif [ -d "$1" ]; then
+        debugger "project > attaching to \"$project_name\" at path \"$1\""
+        tmux new-session -Ac "$1" -s "$project_name"
     else
-        tmux new-session -As "$project_name" -c "$project_path"
+        debugger "project > creating"
+        tmux new-session -s "$(sanitize_name "$PWD")"
     fi
 }
 
