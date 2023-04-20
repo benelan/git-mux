@@ -72,7 +72,7 @@ bare_clone() {
     git clone --bare "$1" .git
     git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
     git fetch origin
-    # 60% of the time, it works every time (requires an origin or upstream remote)
+    # 60% of the time, it works every time (requires an "origin" or "upstream" remote)
     default_git_branch="$(
         git remote show "$(
             git remote | grep -Eo "(upstream|origin)" | tail -1
@@ -224,8 +224,10 @@ handle_task() {
     fi
 
     debugger "task > creating new \"$task_name\" task in \"$task_dir\": $*"
-    tmux new-window -Sdn "$task_name" -c "$task_dir"
-
+    # Not using new-window's -S flag for backwards compatability
+    if ! tmux list-windows | grep -q "$task_name"; then
+        tmux new-window -dn "$task_name" -c "$task_dir"
+    fi
     # Attach, switch, or send keys to the new task
     if [ -n "$2" ]; then
         shift
