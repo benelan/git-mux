@@ -8,10 +8,9 @@ if [ -z "$GIT_MUX_SELECT_CMD" ] && ! has fzf; then
     exit 1
 fi
 
-export GIT_MUX_SELECT_CMD="${GIT_MUX_SELECT_CMD:-"fzf -1 -0 --cycle --reverse --height 30"}"
-export GIT_MUX_PROJECTS="${GIT_MUX_PROJECTS:-"$HOME"}"
-export GIT_MUX_BRANCH_PREFIX="${GIT_MUX_BRANCH_PREFIX:-""}"
-
+GIT_MUX_SELECT_CMD="${GIT_MUX_SELECT_CMD:-"fzf -1 -0 --cycle --reverse --height 30"}"
+GIT_MUX_PROJECTS="${GIT_MUX_PROJECTS:-"$HOME"}"
+GIT_MUX_BRANCH_PREFIX="${GIT_MUX_BRANCH_PREFIX:-""}"
 GIT_MUX_DEBUG="${GIT_MUX_DEBUG:-""}"
 
 debugger() {
@@ -40,20 +39,18 @@ has_tmux_server() {
 }
 
 tmux_create_if_needed_and_attach() {
-    project_name="$(sanitize_name "$1")"
+    project_path="${1:-$PWD}"
+    project_name="$(sanitize_name "$project_path")"
     if in_tmux; then
         if ! tmux_session_exists "$project_name"; then
-            debugger "project > creating \"$project_name\" at path \"$1\""
-            tmux new-session -Adc "$1" -s "$project_name"
+            debugger "project > creating \"$project_name\" at path \"$project_path\""
+            tmux new-session -Adc "$project_path" -s "$project_name"
         fi
-        debugger "project > switching to \"$project_name\" at path \"$1\""
+        debugger "project > switching to \"$project_name\" at path \"$project_path\""
         tmux switch-client -t "$project_name"
-    elif [ -d "$1" ]; then
-        debugger "project > attaching to \"$project_name\" at path \"$1\""
-        tmux new-session -Ac "$1" -s "$project_name"
     else
-        debugger "project > creating"
-        tmux new-session -s "$(sanitize_name "$PWD")"
+        debugger "project > creating or attaching to \"$project_name\" at path \"$project_path\""
+        tmux new-session -As "$project_name" -c "$project_path"
     fi
 }
 
@@ -253,16 +250,16 @@ usage() {
     echo "Usage: git mux <command> [<args>]"
     echo
     echo "Comands:"
-    echo "  startup, s         Create a tmux session if one doesn't exist, and attach to the home project."
-    echo "  project, p         Create or switch to a project, usually a git repo."
-    echo "  task,    t         Create, switch, or send text to a task within a project, usually a git branch."
-    echo "  debug,   d         Runs the following subcommand and arguments with logging."
+    echo "  s,  startup         Create a tmux session if one doesn't exist, and attach to the home project."
+    echo "  p,  project         Create or switch to a project, usually a git repo."
+    echo "  t,  task            Create, switch, or send text to a task within a project, usually a git branch."
+    echo "  d,  debug           Runs the following subcommand and arguments with logging."
     echo ""
-    echo "Example: git mux task ~/projects/my-app 'npm i && npm run build'"
+    echo "Example: \$ git mux task ~/projects/my-app 'npm i && npm run build'"
     exit 1
 }
 
-parse_args() {
+main() {
     if [ -n "$1" ]; then
         case $1 in
             c | clone)
@@ -291,7 +288,7 @@ parse_args() {
                 GIT_MUX_DEBUG=1
                 shift
                 echo "running in debug mode"
-                parse_args "$@"
+                main "$@"
                 ;;
             *)
                 usage "Unknown command passed: $1"
@@ -302,4 +299,4 @@ parse_args() {
     fi
 }
 
-parse_args "$@"
+main "$@"
