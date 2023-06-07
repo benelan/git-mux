@@ -149,10 +149,18 @@ git_task() {
     if [ -d "$task_start_dir/.git" ] ||
         [ "$(git rev-parse --show-toplevel 2>/dev/null)" = "$task_start_dir" ]; then
         if [ -n "$1" ]; then
-            task_branch="$GIT_MUX_BRANCH_PREFIX$1"
+            task_branch="$1"
+            debugger "task > provided branch: $task_branch"
+
+            if ! git show-ref --verify --quiet "refs/heads/$task_branch" &&
+                [ "${task_branch#*"/"}" = "$task_branch" ]; then
+                task_branch="$GIT_MUX_BRANCH_PREFIX/$task_branch"
+                debugger "task > added prefix to branch: $task_branch"
+            fi
+
             ! git show-ref --verify --quiet "refs/heads/$task_branch" &&
-                task_branch_flags="-b "
-            debugger "task > provided branch with prefix: $task_branch"
+                task_branch_flags="-b" &&
+                debugger "task > branch not found and will be created"
             shift
         else
             task_branch=$(select_branch)
@@ -172,16 +180,16 @@ git_task() {
             if [ ! -d "$task_start_dir" ]; then
                 debugger "task > worktree does not exist, adding now"
                 # shellcheck disable=2086
-                git worktree add $task_name $task_branch_flags$task_branch
+                git worktree add $task_name $task_branch_flags $task_branch
             fi
         else
 
             debugger "task > checking out branch"
             # shellcheck disable=2086
-            git checkout $task_branch_flags$task_branch
+            git checkout $task_branch_flags $task_branch
         fi
 
-        handle_task "$task_start_dir" "$*"
+        handle_task "$task_start_dir" "${task_name:-$task_branch} ""$*"
     fi
 
     unset task_start_dir task_name task_branch task_branch_flags
@@ -213,25 +221,24 @@ handle_task() {
     debugger "task > args: $*"
     # Check if the provided argument is a valid path
     if [ -n "$1" ] && [ -d "$1" ]; then
-        task_name=$(sanitize_name "$1")
         task_dir="$(cd "$1" && pwd)"
+        task_name="${2:-"$(sanitize_name "$task_dir")"}"
     else
         git_task "$*"
         return 0
     fi
 
-    debugger "task > creating new \"$task_name\" task in \"$task_dir\": $*"
+    debugger "task > creating new \"$task_name\" task in \"$task_dir\""
     # Not using new-window's -S flag for backwards compatability
     if ! tmux list-windows | grep -q "$task_name"; then
         tmux new-window -dn "$task_name" -c "$task_dir"
     fi
     # Attach, switch, or send keys to the new task
-    if [ -n "$2" ]; then
-        shift
+    if [ -n "$3" ]; then
+        shift && shift
         debugger "task > executing command (not attaching/switching): \"$*\""
         tmux send-keys -t "$GIT_MUX_TMUX_SESSION:$task_name" "$*" Enter
     elif [ -n "$TMUX" ]; then
-
         debugger "task > switching client"
         tmux switch-client -t "$GIT_MUX_TMUX_SESSION:$task_name"
     else
