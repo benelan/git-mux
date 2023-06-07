@@ -189,7 +189,7 @@ git_task() {
             git checkout $task_branch_flags $task_branch
         fi
 
-        handle_task "$task_start_dir" "${task_name:-$task_branch} ""$*"
+        handle_task "$task_start_dir" "${task_name:-$task_branch}" "$*"
     fi
 
     unset task_start_dir task_name task_branch task_branch_flags
@@ -229,7 +229,7 @@ handle_task() {
     fi
 
     debugger "task > creating new \"$task_name\" task in \"$task_dir\""
-    # Not using new-window's -S flag for backwards compatability
+    # Not using new-window's -S flag for backwards compatibility
     if ! tmux list-windows | grep -q "$task_name"; then
         tmux new-window -dn "$task_name" -c "$task_dir"
     fi
