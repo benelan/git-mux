@@ -189,7 +189,7 @@ git_task() {
             git checkout $task_branch_flags $task_branch
         fi
 
-        handle_task "$task_start_dir" "${task_name:-$task_branch}" "$*"
+        handle_task "$task_start_dir" "${task_name:-$(sanitize_name "$task_branch")}" "$*"
     fi
 
     unset task_start_dir task_name task_branch task_branch_flags
@@ -197,8 +197,10 @@ git_task() {
 
 ################################################################################
 # Attaches/switches to a tmux window. If the next argument is a valid path,
-# the window is created in that directory. If there are arguments after a valid
-# path, they are sent to the window and ran instead of attaching/switching.
+# the window is created in that directory. If there are arguments after the
+# path, the following one is used as the tmux window name. The rest of the
+# arguments are sent to the window and executed instead of attaching/switching.
+# This allows you to execute commands in the background and continue working.
 #
 #
 # If the initial argument isn't a valid path it is treated a a git branch and
@@ -207,8 +209,8 @@ git_task() {
 #
 # Examples:
 #
-# Install deps and start app in a tmux window, creating one if it doesn't exist
-# $ git mux task packages/app npm install && npm start
+# Install deps and start app in a new or preexisting tmux window named 'start'.
+# $ git mux task packages/app start npm install && npm start
 #
 # Create/checkout branch in tmux window, creating a git worktree if relevant.
 # Appends $GIT_MUX_BRANCH_PREFIX to the argument when creating a new branch.
@@ -224,7 +226,7 @@ handle_task() {
         task_dir="$(cd "$1" && pwd)"
         task_name="${2:-"$(sanitize_name "$task_dir")"}"
     else
-        git_task "$*"
+        git_task "$@"
         return 0
     fi
 
@@ -256,7 +258,7 @@ usage() {
     fi
     echo "Usage: git mux <command> [<args>]"
     echo
-    echo "Comands:"
+    echo "Commands:"
     echo "  s,  startup         Create a tmux session if one doesn't exist, and attach to the home project."
     echo "  p,  project         Create or switch to a project, usually a git repo."
     echo "  t,  task            Create, switch, or send text to a task within a project, usually a git branch."
@@ -271,19 +273,19 @@ main() {
         case $1 in
             c | clone)
                 shift
-                bare_clone "$*"
+                bare_clone "$@"
                 ;;
             t | task)
                 shift
-                handle_task "$*"
+                handle_task "$@"
                 ;;
             p | project)
                 shift
-                handle_project "$*"
+                handle_project "$@"
                 ;;
             s | startup)
                 shift
-                tmux_create_if_needed_and_attach "$*"
+                tmux_create_if_needed_and_attach "$@"
                 ;;
             -h | --help)
                 usage
