@@ -1,17 +1,91 @@
 #!/usr/bin/env sh
 set -e
 
-has() { command -v "$1" >/dev/null 2>&1; }
+usage_cli() {
+    echo "$*"
+    printf "Usage:            git mux <command> [<arg>...]
 
-if [ -z "$GIT_MUX_SELECT_CMD" ] && ! has fzf; then
+Commands:
+  s,  startup     Create or switch to a tmux session for PWD or <arg>.
+  c,  clone       Clone and configure a bare git repo for use with worktrees.
+  p,  project     Create or switch to a project (session).
+                  Projects are usually (but not required to be) a git repo.
+  t,  task        Create, switch, or send text to a task (window).
+                  Tasks are usually (but not required to be) a git worktree.
+  d,  debug       Run the following <command> and arguments with logging.
+  h,  help        Show this message.
+
+Examples:
+  # Attach to tmux session for the current directory or <arg> (useful in bashrc)
+  git mux startup
+
+  # Select a project and create or switch to its tmux session
+  git mux p
+
+  # Directly create or switch to a project (useful for alias or keybindings)
+  git mux project ~/projects/my-app
+
+  # Select a git branch and create or switch to its git worktree and tmux window
+  git mux t
+
+  # If 'feature/123' is a valid path, create or switch to its tmux window.
+  # Otherwise assume it is a git branch and create or switch to its
+  # worktree and window, creating the branch if it doesn't exist.
+  git mux task feature/123
+
+  # Run commands in a tmux window named npm_stuff without switching to it
+  git mux task ~/projects/my-app npm_stuff npm i && npm run build
+
+  # The previous example with logging
+  git mux debug task ~/projects/my-app npm_stuff npm i && npm run build"
+    exit 1
+}
+
+usage_config() {
+    # shellcheck disable=2016
+    printf 'git-mux can be configured with the following environment variables:
+
+$GIT_MUX_PROJECT              Space-separated list of projects for selection.
+
+$GIT_MUX_PROJECT_PARENTS      Space-separated list of directories that contain
+                              projects, defaults to $PROJECTS or $HOME.
+                              - selects from their children (depth of 1)
+                              - ignored if $GIT_MUX_PROJECTS is set
+
+$GIT_MUX_SELECT_CMD           Command used to select a project, defaults to fzf.
+                              - receives the directory list from stdin
+                              - sends a single, selected directory to stdout
+
+$GIT_MUX_BRANCH_PREFIX        A prefix (followed by "/") to add to new branches,
+                              off by default.
+                              - ignored if the provided name already contains a "/"
+                              - common examples are "feature" or "$(id -un)"
+'
+}
+
+has_command() { command -v "$1" >/dev/null 2>&1; }
+
+if [ -z "$GIT_MUX_SELECT_CMD" ] && ! has_command fzf; then
     echo "Error: install fzf or specify a different method for selection with the GIT_MUX_SELECT_CMD environment variable"
     exit 1
 fi
 
-GIT_MUX_SELECT_CMD="${GIT_MUX_SELECT_CMD:-"fzf -1 -0 --cycle --reverse --height 30"}"
-GIT_MUX_PROJECTS="${GIT_MUX_PROJECTS:-"$HOME"}"
-GIT_MUX_BRANCH_PREFIX="${GIT_MUX_BRANCH_PREFIX:-""}"
-GIT_MUX_DEBUG="${GIT_MUX_DEBUG:-""}"
+GIT_MUX_DEBUG="${GIT_MUX_DEBUG:-}"
+
+GIT_MUX_BRANCH_PREFIX=${GIT_MUX_BRANCH_PREFIX:-}
+
+GIT_MUX_SELECT_CMD=${GIT_MUX_SELECT_CMD:-fzf --reverse}
+
+GIT_MUX_PROJECT_PARENTS=${GIT_MUX_PROJECT_PARENTS:-${PROJECTS:-$HOME}}
+
+GIT_MUX_PROJECTS=${GIT_MUX_PROJECTS:-$(
+    # shellcheck disable=2086
+    find $GIT_MUX_PROJECT_PARENTS -maxdepth 1 -mindepth 1 -type d
+)}
+
+# --------------------------------------------------------------------- }}}
+# Utils                                                                 {{{
+# --------------------------------------------------------------------- {|}
 
 debugger() {
     if [ -n "$GIT_MUX_DEBUG" ]; then
@@ -23,9 +97,7 @@ sanitize_name() {
     basename "$1" | tr "./" "__"
 }
 
-################################################################################
 # tmux utils from https://github.com/thoughtbot/dotfiles/blob/main/bin/tat
-################################################################################
 tmux_session_exists() {
     tmux has-session -t "=$1" >/dev/null 2>&1
 }
@@ -56,11 +128,13 @@ tmux_create_if_needed_and_attach() {
 
 has_tmux_server && GIT_MUX_TMUX_SESSION="$(tmux display-message -p "#S")"
 
-################################################################################
+# --------------------------------------------------------------------- }}}
+# Clone                                                                 {{{
+# --------------------------------------------------------------------- {|}
+
 # Clones a bare repo for use with git-worktree and creates an
 # initial worktree for the repo's default branch.
 # https://git-scm.com/docs/git-worktree
-################################################################################
 bare_clone() {
     new_repo_dir="${2:-"$(basename "$1" .git)"}"
     mkdir -p "$new_repo_dir"
@@ -81,20 +155,17 @@ bare_clone() {
     unset new_repo_dir default_git_branch
 }
 
-################################################################################
-# Use $GIT_MUX_SELECT_CMD to select a project from within the $GIT_MUX_PROJECTS
-# directories.
-################################################################################
-select_project() {
-    # shellcheck disable=2086
-    find $GIT_MUX_PROJECTS -maxdepth 1 -mindepth 1 -type d | $GIT_MUX_SELECT_CMD
-}
+# --------------------------------------------------------------------- }}}
+# Project                                                               {{{
+# --------------------------------------------------------------------- {|}
 
-################################################################################
+# See `git mux help config`
+# shellcheck disable=2086
+select_project() { printf "%s\n" $GIT_MUX_PROJECTS | $GIT_MUX_SELECT_CMD; }
+
 # Creates or attaches to a tmux session for a project. If the following argument
 # is a valid path, it is used for the project. Otherwise the user is prompted
 # to select a project.
-################################################################################
 handle_project() {
     if [ -n "$1" ] && [ -d "$1" ]; then
         debugger "project > valid path provided: $1"
@@ -105,21 +176,7 @@ handle_project() {
     fi
 }
 
-################################################################################
-# Use $GIT_MUX_SELECT_CMD to select an existing git branch for creating a task.
-################################################################################
-select_branch() {
-    # remote and local branches sorted by commit date
-    git for-each-ref refs/remotes refs/heads \
-        --sort=-committerdate --format='%(refname:short)' |
-        # filter by query, remove 'origin/' prefix, dedupe, select branch
-        awk '/'"$GIT_MUX_BRANCH_DEFAULT_QUERY"'/{gsub("^origin/(HEAD)?","")};!x[$0]++' |
-        $GIT_MUX_SELECT_CMD
-}
-
-################################################################################
 # Determines the absolute path of the selected or provided project.
-################################################################################
 find_project_directory() {
     for projects_dir in $GIT_MUX_PROJECTS; do
         if [ -d "$projects_dir/$GIT_MUX_TMUX_SESSION" ]; then
@@ -136,10 +193,66 @@ find_project_directory() {
     unset projects_dir
 }
 
-################################################################################
+# --------------------------------------------------------------------- }}}
+# Task                                                                  {{{
+# --------------------------------------------------------------------- {|}
+
+# Attaches/switches to a tmux window. If the next argument is a valid path,
+# the window is created in that directory. If there are arguments after the
+# path, the following one is used as the tmux window name. The rest of the
+# arguments are sent to the window and executed instead of attaching/switching.
+# This allows you to execute commands in the background and continue working.
+#
+#
+# If the initial argument isn't a valid path it is treated a a git branch and
+# creates/switches to a corresponding git worktree (when relevant). If no
+# argument is provided it prompts to select an existing branch.
+#
+# Examples:
+#
+# Install deps and start app in a new or preexisting tmux window named 'start'.
+# $ git mux task packages/app start npm install && npm start
+#
+# Create/checkout branch in tmux window, creating a git worktree if relevant.
+# Appends $GIT_MUX_BRANCH_PREFIX to the argument when creating a new branch.
+# $ git mux task 123-fix-bug
+#
+# Uses $GIT_MUX_SELECT_CMD to select an existing branch.
+# $ git mux t
+handle_task() {
+    debugger "task > args: $*"
+    # Check if the provided argument is a valid path
+    if [ -n "$1" ] && [ -d "$1" ]; then
+        task_dir="$(cd "$1" && pwd)"
+        task_name="${2:-"$(sanitize_name "$task_dir")"}"
+    else
+        git_task "$@"
+        return 0
+    fi
+
+    debugger "task > creating new \"$task_name\" task in \"$task_dir\""
+    # Not using new-window's -S flag for backwards compatibility
+    if ! tmux list-windows | grep -q "$task_name"; then
+        tmux new-window -dn "$task_name" -c "$task_dir"
+    fi
+    # Attach, switch, or send keys to the new task
+    if [ -n "$3" ]; then
+        shift && shift
+        debugger "task > executing command (not attaching/switching): \"$*\""
+        tmux send-keys -t "$GIT_MUX_TMUX_SESSION:$task_name" "$*" Enter
+    elif [ -n "$TMUX" ]; then
+        debugger "task > switching client"
+        tmux switch-client -t "$GIT_MUX_TMUX_SESSION:$task_name"
+    else
+        debugger "task > attaching"
+        tmux attach -t "$GIT_MUX_TMUX_SESSION:$task_name"
+    fi
+
+    unset task_name task_dir
+}
+
 # The logic that handles the git portion of the 'task' subcommand.
-# See handle_task documentation below for more info.
-################################################################################
+# See handle_task documentation above for more info.
 git_task() {
     task_start_dir="$(find_project_directory)"
 
@@ -189,85 +302,58 @@ git_task() {
             git checkout $task_branch_flags $task_branch
         fi
 
-        handle_task "$task_start_dir" "${task_name:-$(sanitize_name "$task_branch")}" "$*"
+        handle_task "$task_start_dir" \
+            "${task_name:-$(sanitize_name "$task_branch")}" "$*"
     fi
 
     unset task_start_dir task_name task_branch task_branch_flags
 }
 
-################################################################################
-# Attaches/switches to a tmux window. If the next argument is a valid path,
-# the window is created in that directory. If there are arguments after the
-# path, the following one is used as the tmux window name. The rest of the
-# arguments are sent to the window and executed instead of attaching/switching.
-# This allows you to execute commands in the background and continue working.
-#
-#
-# If the initial argument isn't a valid path it is treated a a git branch and
-# creates/switches to a corresponding git worktree (when relevant). If no
-# argument is provided it prompts to select an existing branch.
-#
-# Examples:
-#
-# Install deps and start app in a new or preexisting tmux window named 'start'.
-# $ git mux task packages/app start npm install && npm start
-#
-# Create/checkout branch in tmux window, creating a git worktree if relevant.
-# Appends $GIT_MUX_BRANCH_PREFIX to the argument when creating a new branch.
-# $ git mux task 123-fix-bug
-#
-# Uses $GIT_MUX_SELECT_CMD to select an existing branch.
-# $ git mux t
-################################################################################
-handle_task() {
-    debugger "task > args: $*"
-    # Check if the provided argument is a valid path
-    if [ -n "$1" ] && [ -d "$1" ]; then
-        task_dir="$(cd "$1" && pwd)"
-        task_name="${2:-"$(sanitize_name "$task_dir")"}"
-    else
-        git_task "$@"
-        return 0
-    fi
-
-    debugger "task > creating new \"$task_name\" task in \"$task_dir\""
-    # Not using new-window's -S flag for backwards compatibility
-    if ! tmux list-windows | grep -q "$task_name"; then
-        tmux new-window -dn "$task_name" -c "$task_dir"
-    fi
-    # Attach, switch, or send keys to the new task
-    if [ -n "$3" ]; then
-        shift && shift
-        debugger "task > executing command (not attaching/switching): \"$*\""
-        tmux send-keys -t "$GIT_MUX_TMUX_SESSION:$task_name" "$*" Enter
-    elif [ -n "$TMUX" ]; then
-        debugger "task > switching client"
-        tmux switch-client -t "$GIT_MUX_TMUX_SESSION:$task_name"
-    else
-        debugger "task > attaching"
-        tmux attach -t "$GIT_MUX_TMUX_SESSION:$task_name"
-    fi
-
-    unset task_name task_dir
+# Use $GIT_MUX_SELECT_CMD to select an existing git branch for creating a task.
+select_branch() {
+    # remote and local branches sorted by commit date
+    git for-each-ref refs/remotes refs/heads \
+        --sort=-committerdate --format='%(refname:short)' |
+        # filter by query, remove 'origin/' prefix, dedupe, select branch
+        awk '/'"$GIT_MUX_BRANCH_DEFAULT_QUERY"'/{gsub("^origin/(HEAD)?","")};!x[$0]++' |
+        $GIT_MUX_SELECT_CMD
 }
 
-usage() {
-    if [ -n "$1" ]; then
-        echo "$1"
-        echo
-    fi
-    echo "Usage: git mux <command> [<args>]"
-    echo
-    echo "Commands:"
-    echo "  s,  startup         Create a tmux session if one doesn't exist, and attach to the home project."
-    echo "  p,  project         Create or switch to a project, usually a git repo."
-    echo "  t,  task            Create, switch, or send text to a task within a project, usually a git branch."
-    echo "  d,  debug           Runs the following subcommand and arguments with logging."
-    echo ""
-    echo "Example: \$ git mux task ~/projects/my-app 'npm i && npm run build'"
-    exit 1
+# --------------------------------------------------------------------- }}}
+# Parse args                                                            {{{
+# --------------------------------------------------------------------- {|}
+
+help() {
+    case $1 in
+        c | config) usage_config ;;
+        *) usage_cli ;;
+    esac
 }
 
+log_config_values() {
+    printf "git-mux running in debug mode...
+
+Configuration
+--------------
+GIT_MUX_PROJECT_PARENTS:
+%s
+
+GIT_MUX_PROJECTS:
+%s
+
+GIT_MUX_SELECT_CMD:
+%s
+
+GIT_MUX_BRANCH_PREFIX:
+%s
+
+Logs
+---------------
+" "$GIT_MUX_PROJECT_PARENTS" \
+        "$GIT_MUX_PROJECTS" \
+        "$GIT_MUX_SELECT_CMD" \
+        "$GIT_MUX_BRANCH_PREFIX"
+}
 main() {
     if [ -n "$1" ]; then
         case $1 in
@@ -287,25 +373,25 @@ main() {
                 shift
                 tmux_create_if_needed_and_attach "$@"
                 ;;
-            -h | --help)
-                usage
+            h | help | -h | --help)
+                shift
+                help "$@"
                 ;;
-            # h | help)
-            #     command_usage
-            #     ;;
             d | debug)
                 GIT_MUX_DEBUG=1
                 shift
-                echo "running in debug mode"
+                log_config_values
                 main "$@"
                 ;;
             *)
-                usage "Unknown command passed: $1"
+                usage_cli "Invalid command: $1"
                 ;;
         esac
     else
-        usage
+        usage_cli
     fi
 }
+
+# --------------------------------------------------------------------- }}}
 
 main "$@"
