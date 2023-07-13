@@ -6,7 +6,6 @@ usage_cli() {
     printf "Usage:            git mux <command> [<arg>...]
 
 Commands:
-  s,  startup     Create or switch to a tmux session for PWD or <arg>.
   c,  clone       Clone and configure a bare git repo for use with worktrees.
   p,  project     Create or switch to a project (session).
                   Projects are usually (but not required to be) a git repo.
@@ -16,13 +15,10 @@ Commands:
   h,  help        Show this message.
 
 Examples:
-  # Attach to tmux session for the current directory or <arg> (useful in bashrc)
-  git mux startup
-
   # Select a project and create or switch to its tmux session
   git mux p
 
-  # Directly create or switch to a project (useful for alias or keybindings)
+  # Directly create or switch to a project (useful for aliases/keymaps/startup)
   git mux project ~/projects/my-app
 
   # Select a git branch and create or switch to its git worktree and tmux window
@@ -361,17 +357,13 @@ main() {
                 shift
                 bare_clone "$@"
                 ;;
-            t | task)
-                shift
-                handle_task "$@"
-                ;;
             p | project)
                 shift
                 handle_project "$@"
                 ;;
-            s | startup)
+            t | task)
                 shift
-                tmux_create_if_needed_and_attach "$@"
+                handle_task "$@"
                 ;;
             h | help | -h | --help)
                 shift
