@@ -39,9 +39,10 @@ Examples:
 
 usage_config() {
     # shellcheck disable=2016
-    printf 'git-mux can be configured with the following environment variables:
+    cat <<EOF
+git-mux can be configured with the following environment variables:
 
-$GIT_MUX_PROJECT              Space-separated list of projects for selection.
+$GIT_MUX_PROJECTS             Space-separated list of projects for selection.
 
 $GIT_MUX_PROJECT_PARENTS      Space-separated list of directories that contain
                               projects, defaults to $PROJECTS or $HOME.
@@ -56,7 +57,7 @@ $GIT_MUX_BRANCH_PREFIX        A prefix (followed by "/") to add to new branches,
                               off by default.
                               - ignored if the provided name already contains a "/"
                               - common examples are "feature" or "$(id -un)"
-'
+EOF
 }
 
 has_command() { command -v "$1" >/dev/null 2>&1; }
@@ -327,29 +328,28 @@ help() {
 }
 
 log_config_values() {
-    printf "git-mux running in debug mode...
+    cat <<EOF
+git-mux running in debug mode...
 
 Configuration
 --------------
 GIT_MUX_PROJECT_PARENTS:
-%s
+$GIT_MUX_PROJECT_PARENTS
 
 GIT_MUX_PROJECTS:
-%s
+$GIT_MUX_PROJECTS
 
 GIT_MUX_SELECT_CMD:
-%s
+$GIT_MUX_SELECT_CMD
 
 GIT_MUX_BRANCH_PREFIX:
-%s
+$GIT_MUX_BRANCH_PREFIX
 
 Logs
 ---------------
-" "$GIT_MUX_PROJECT_PARENTS" \
-        "$GIT_MUX_PROJECTS" \
-        "$GIT_MUX_SELECT_CMD" \
-        "$GIT_MUX_BRANCH_PREFIX"
+EOF
 }
+
 main() {
     if [ -n "$1" ]; then
         case $1 in
