@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+# Opens a path/file with the default system application
+# or the current directory when no argument is provided
+#
+# Uses `os-detect` to determine the operating system
+
+case "$(os-detect)" in
+    windows_wsl) open_cmd="wslview" ;;
+    windows_cygwin) open_cmd="cygstart" ;;
+    windows_m*) open_cmd="start" ;;
+    osx) open_cmd="open" ;;
+    linux*) open_cmd="xdg-open" ;;
+    *) echo "Unknown operating system and open command, please log an issue" && return 1 ;;
+esac
+if [ $# -eq 0 ]; then
+    "$open_cmd" .
+else
+    "$open_cmd" "$@"
+fi

@@ -1,0 +1,158 @@
+#!/usr/bin/env sh
+
+# A portable clipboard utility that works on multiple operating systems.
+# https://gist.github.com/RichardBronosky/56d8f614fab2bacdd8b048fb58d0c0c7
+#
+# Uses `os-detect` to determine the operating system
+
+SHUTILS_STATE_DIR=${XDG_STATE_HOME:-$HOME/.local/state}/shutils
+mkdir "$SHUTILS_STATE_DIR" 2>/dev/null
+
+linux_copy() {
+    if is-supported xclip; then
+        cat | xclip -selection clipboard
+    elif is-supported xsel; then
+        cat | xsel -bi
+    elif is-supported wl-copy; then
+        cat | wl-copy
+    fi
+}
+
+linux_paste() {
+    if is-supported xclip; then
+        xclip -selection clipboard -o
+    elif is-supported xsel; then
+        xsel -bo
+    elif is-supported wl-copy; then
+        wl-paste
+    fi
+}
+
+windows_wsl_copy() {
+    cat | perl -pe 'chomp if eof' | /mnt/c/Windows/System32/clip.exe
+}
+
+windows_wsl_paste() {
+    /mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe Get-Clipboard | sed 's/\r//'
+}
+
+windows_cygwin_copy() {
+    cat >/dev/clipboard
+}
+
+windows_cygwin_paste() {
+    cat /dev/clipboard
+}
+
+osx_copy() {
+    cat | pbcopy
+}
+
+osx_paste() {
+    pbpaste
+}
+
+stdin_is_a_pipe() {
+    [ -p /dev/stdin ]
+}
+
+stdin_is_a_tty() {
+    [ -t 0 ]
+}
+
+stdin_is_pipe_like() {
+    stdin_is_a_pipe || ! stdin_is_a_tty
+}
+
+stdout_is_pipe_like() {
+    ! stdout_is_a_tty # meaning # it must be a pipe or redirection
+}
+
+stdout_is_a_tty() {
+    [ -t 1 ]
+}
+
+requested_open_ended() {
+    [ "$1" = "-" ]
+}
+
+enable_tee_like_chaining() {
+    # see `man tee`
+    if stdout_is_pipe_like; then
+        "${_operating_system}_paste"
+    elif requested_open_ended "$@"; then
+        "${_operating_system}_paste"
+        echo
+    fi
+}
+
+prevent_prompt_from_being_on_the_same_line() {
+    if stdout_is_a_tty; then
+        # we don't have to be strict about not altering the output
+        echo
+    fi
+}
+
+test_suite() {
+    os_cb_cmd="$(basename "$0")"
+    printf '1234' | "$os_cb_cmd"
+
+    printf "\n1. output to TTY - expect '1234'\n"
+    "$os_cb_cmd"
+
+    printf "\n2. output to pipe - expect '1234'\n"
+    "$os_cb_cmd" | cat
+    echo
+
+    # TODO: hangs on linux
+    printf "\n3. input from pipe and output to pipe - expect '1234'\n"
+    printf '1234' | "$os_cb_cmd" | cat
+}
+
+debug() {
+    os_cb_logs="$SHUTILS_STATE_DIR/os_cb.log"
+    echo "operating_system: $_operating_system" >>"$os_cb_logs"
+    stdin_is_a_pipe &&
+        echo "stdin_is_a_pipe: 1" >>"$os_cb_logs" ||
+        echo "stdin_is_a_pipe: 0" >>"$os_cb_logs"
+    stdin_is_a_tty &&
+        echo "stdin_is_a_tty: 1" >>"$os_cb_logs" ||
+        echo "stdin_is_a_tty: 0" >>"$os_cb_logs"
+    stdin_is_pipe_like &&
+        echo "stdin_is_pipe_like: 1" >>"$os_cb_logs" ||
+        echo "stdin_is_pipe_like: 0" >>"$os_cb_logs"
+    stdout_is_pipe_like &&
+        echo "stdout_is_pipe_like: 1" >>"$os_cb_logs" ||
+        echo "stdout_is_pipe_like: 0" >>"$os_cb_logs"
+    stdout_is_a_tty &&
+        echo "stdout_is_a_tty: 1" >>"$os_cb_logs" ||
+        echo "stdout_is_a_tty: 0" >>"$os_cb_logs"
+    echo >>"$os_cb_logs"
+}
+
+main() {
+    _operating_system="$(os-detect)"
+    case "$_operating_system" in
+        windows_cygwin | windows_wsl | osx) ;;
+        linux*) _operating_system="linux" ;;
+        # exit if the OS is not supported
+        *) echo "operating system not supported, please log an issue" && return 1 ;;
+    esac
+
+    if stdin_is_pipe_like; then
+        "${_operating_system}_copy"
+        enable_tee_like_chaining "$@"
+    else
+        "${_operating_system}_paste"
+        prevent_prompt_from_being_on_the_same_line
+    fi
+}
+
+if [ "$1" = "--test" ]; then
+    OS_CB_DEBUG="1" test_suite
+else
+    if [ "$OS_CB_DEBUG" = "1" ] || [ "$1" = "--debug" ]; then
+        debug
+    fi
+    main "$@"
+fi
