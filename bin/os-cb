@@ -52,6 +52,19 @@ osx_paste() {
     pbpaste
 }
 
+# https://sunaku.github.io/tmux-yank-osc52.html
+osc52_copy() {
+    esc="\033]52;c;$(printf "%s" "$(cat "$@")" | head -c 74994 | base64 | tr -d '\r\n')\a"
+    test -n "$TMUX" -o -z "${TERM##screen*}" && esc="\033Ptmux;\033$esc\033\\"
+    # shellcheck disable=2059
+    printf "$esc"
+}
+
+ssh_session() {
+    [ -n "$SSH_CLIENT" ] || [ -n "$SSH_TTY" ] || [ -n "$SSH_CONNECTION" ] ||
+        (command -v pstree >/dev/null 2>&1 && pstree -ps $$ | grep --quiet "sshd")
+}
+
 stdin_is_a_pipe() {
     [ -p /dev/stdin ]
 }
@@ -65,7 +78,7 @@ stdin_is_pipe_like() {
 }
 
 stdout_is_pipe_like() {
-    ! stdout_is_a_tty # meaning # it must be a pipe or redirection
+    ! stdout_is_a_tty # meaning it must be a pipe or redirection
 }
 
 stdout_is_a_tty() {
@@ -140,6 +153,7 @@ main() {
     esac
 
     if stdin_is_pipe_like; then
+        ssh_session && osc52_copy "$@"
         "${_operating_system}_copy"
         enable_tee_like_chaining "$@"
     else
