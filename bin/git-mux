@@ -42,21 +42,26 @@ usage_config() {
     cat <<EOF
 git-mux can be configured with the following environment variables:
 
-$GIT_MUX_PROJECTS             Space-separated list of projects for selection.
+\$GIT_MUX_PROJECTS            Space-separated list of projects for selection.
 
-$GIT_MUX_PROJECT_PARENTS      Space-separated list of directories that contain
-                              projects, defaults to $PROJECTS or $HOME.
+\$GIT_MUX_PROJECT_PARENTS     Space-separated list of directories that contain
+                              projects, defaults to \$PROJECTS or \$HOME.
                               - selects from their children (depth of 1)
-                              - ignored if $GIT_MUX_PROJECTS is set
+                              - ignored if \$GIT_MUX_PROJECTS is set
 
-$GIT_MUX_SELECT_CMD           Command used to select a project, defaults to fzf.
+\$GIT_MUX_SELECT_CMD          Command used to select a project, defaults to fzf.
                               - receives the directory list from stdin
                               - sends a single, selected directory to stdout
 
-$GIT_MUX_BRANCH_PREFIX        A prefix (followed by "/") to add to new branches,
+\$GIT_MUX_BRANCH_PREFIX       A prefix (followed by "/") to add to new branches,
                               off by default.
                               - ignored if the provided name already contains a "/"
                               - common examples are "feature" or "$(id -un)"
+
+\$GIT_MUX_NEW_WORKTREE_CMD    Commands to execute in the new tmux window when
+                              a new git worktree is created.
+                              - for example, "[ -f "./package.json" ] && npm i
+
 EOF
 }
 
@@ -232,9 +237,10 @@ handle_task() {
     if ! tmux list-windows | grep -q "$task_name"; then
         tmux new-window -dn "$task_name" -c "$task_dir"
     fi
+
     # Attach, switch, or send keys to the new task
     if [ -n "$3" ]; then
-        shift && shift
+        shift 2
         debugger "task > executing command (not attaching/switching): \"$*\""
         tmux send-keys -t "$GIT_MUX_TMUX_SESSION:$task_name" "$*" Enter
     elif [ -n "$TMUX" ]; then
@@ -291,9 +297,13 @@ git_task() {
                 debugger "task > worktree does not exist, adding now"
                 # shellcheck disable=2086
                 git worktree add $task_name $task_branch_flags $task_branch
+
+                # if provided, commands to the new worktree's tmux window
+                [ -n "$GIT_MUX_NEW_WORKTREE_CMD" ] &&
+                    tmux send-keys -t "$GIT_MUX_TMUX_SESSION:$task_name" \
+                        "$GIT_MUX_NEW_WORKTREE_CMD" Enter
             fi
         else
-
             debugger "task > checking out branch"
             # shellcheck disable=2086
             git checkout $task_branch_flags $task_branch
@@ -344,6 +354,9 @@ $GIT_MUX_SELECT_CMD
 
 GIT_MUX_BRANCH_PREFIX:
 $GIT_MUX_BRANCH_PREFIX
+
+GIT_MUX_NEW_WORKTREE_CMD
+$GIT_MUX_NEW_WORKTREE_CMD
 
 Logs
 ---------------
