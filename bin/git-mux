@@ -180,19 +180,31 @@ handle_project() {
 
 # Determines the absolute path of the selected or provided project.
 find_project_directory() {
-    for projects_dir in $GIT_MUX_PROJECTS; do
-        if [ -d "$projects_dir/$GIT_MUX_TMUX_SESSION" ]; then
-            echo "$projects_dir/$GIT_MUX_TMUX_SESSION"
+    # check if the tmux session name is one of the projects
+    for project in $GIT_MUX_PROJECTS; do
+        if [ $(basename "$project") = "$GIT_MUX_TMUX_SESSION" ]; then
+            echo "$project"
+            unset project
             return
         fi
     done
+
+    # check if the tmux session name is a child of a project parent
+    for project_parent in $GIT_MUX_PROJECT_PARENTS; do
+        if [ -d "$project_parent/$GIT_MUX_TMUX_SESSION" ]; then
+            echo "$project_parent/$GIT_MUX_TMUX_SESSION"
+            unset project_parent
+            return
+        fi
+    done
+
+    # select a new project if in the home one
     if [ "$GIT_MUX_TMUX_SESSION" = "$(basename ~)" ]; then
         # pick a project if in the home session
         select_project && return
     else
         pwd
     fi
-    unset projects_dir
 }
 
 # --------------------------------------------------------------------- }}}
@@ -262,22 +274,20 @@ git_task() {
     debugger "task > project's directory: $task_start_dir"
     cd "$task_start_dir" || return 1
 
-    if [ -d "$task_start_dir/.git" ] ||
-        [ "$(git rev-parse --show-toplevel 2>/dev/null)" = "$task_start_dir" ]; then
+    if is_git_root_dir; then
         if [ -n "$1" ]; then
             task_branch="$1"
             debugger "task > provided branch: $task_branch"
 
-            if ! git show-ref --verify --quiet "refs/heads/$task_branch" &&
-                [ "${task_branch#*"/"}" = "$task_branch" ]; then
-                task_branch="$GIT_MUX_BRANCH_PREFIX/$task_branch"
-                debugger "task > added prefix to branch: $task_branch"
-            fi
-
-            ! git show-ref --verify --quiet "refs/heads/$task_branch" &&
-                task_branch_flags="-b" &&
+            if ! git show-ref --verify --quiet "refs/heads/$task_branch"; then
+                task_branch_flags="-b"
                 debugger "task > branch not found and will be created"
-            shift
+                shift
+                if [ "${task_branch#*"/"}" = "$task_branch" ]; then
+                    task_branch="$GIT_MUX_BRANCH_PREFIX/$task_branch"
+                    debugger "task > added prefix to branch: $task_branch"
+                fi
+            fi
         else
             task_branch=$(select_branch)
             debugger "task > selected branch: $task_branch"
@@ -287,8 +297,7 @@ git_task() {
         debugger "task > sanitized task name: $task_name"
 
         # naively assumes a bare repo will be using worktrees
-        if [ "$(git config --get core.bare)" = "true" ]; then
-
+        if [ "$(git rev-parse --is-bare-repository 2>/dev/null)" = "true" ]; then
             debugger "task > project is bare repo, using git-worktree"
             task_start_dir="$task_start_dir/$task_name"
 
@@ -314,6 +323,17 @@ git_task() {
     fi
 
     unset task_start_dir task_name task_branch task_branch_flags
+}
+
+is_git_root_dir() {
+    git_dir="$(git rev-parse --path-format=relative --git-dir 2>/dev/null)"
+    # normal repos
+    [ "$git_dir" = ".git" ] ||
+        # bare repos
+        [ "$git_dir" = "." ] ||
+        # just for safsies
+        [ "$(git rev-parse --path-format=absolute --show-toplevel 2>/dev/null)" = "$task_start_dir" ]
+
 }
 
 # Use $GIT_MUX_SELECT_CMD to select an existing git branch for creating a task.
