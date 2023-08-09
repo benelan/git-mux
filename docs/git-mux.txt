@@ -9,6 +9,8 @@ Commands:
   t,  task        Create, switch, or send text to a task (tmux window).
                   Tasks are usually (but not required to be) a git worktree.
 
+  config          Print the current configuration values to stdout.
+
   h,  help        Show this message.
 
 Configuration:

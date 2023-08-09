@@ -23,13 +23,11 @@ GIT_MUX_NEW_WORKTREE_CMD      Commands to execute in the tmux window when a new
                               - off by default
                               - example: [ -f "./package.json" ] && npm i
 
-GIT_MUX_LOG_FILE              Path to a file for printing logs.
-                              - attempts to default to (in order):
+GIT_MUX_LOGS                 Path to a file for printing logs.
+                              - Set to "0" to disable logging.
+                              - default is picked in the following order:
                                 - "$XDG_STATE_HOME/shutils/git-mux.log"
                                 - "$HOME/.local/state/shutils/git-mux.log"
-                                - "$HOME/.shutils/git-mux.log"
+                                -  <shutils repo clone>/logs/git-mux.log
 
-GIT_MUX_LOG                   Set to any value to enable logging.
-                              - off by default
-
-The configuration values are logged when git-mux runs.
+Run `git-mux config` to see the current configuration.
