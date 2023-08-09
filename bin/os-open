@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 # Opens a path/file with the default system application
 # or the current directory when no argument is provided

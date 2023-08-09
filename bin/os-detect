@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 # shellcheck disable=2076
 
 # Detects the operating and outputs it in a machine parsable format.
@@ -25,9 +25,9 @@
 # SOFTWARE.
 
 # detects the operating system
-if [[ -f /proc/version ]] && grep -iq Microsoft /proc/version; then
+if [ -f /proc/version ] && grep -iq Microsoft /proc/version; then
     os="windows_wsl"
-elif [[ -z "$OSTYPE" ]]; then
+elif [ -n "$OSTYPE" ]; then
     case "$OSTYPE" in
         solaris*) os="solaris" ;;
         darwin*) os="osx" ;;
@@ -39,7 +39,7 @@ elif [[ -z "$OSTYPE" ]]; then
         *) os="unknown_$OSTYPE" ;;
     esac
 else
-    uname="$(uname -s)"
+    uname="$(uname -s 2>/dev/null)"
     case "$uname" in
         Linux*) os="linux" ;;
         Darwin*) os="mac" ;;
@@ -49,9 +49,9 @@ else
 fi
 
 # attempt to detect linux distro
-if [[ "$os" == "linux" ]]; then
+if [ "$os" = "linux" ]; then
     # get the id from the standard "/etc/os-release" location
-    if [[ -f /etc/os-release ]]; then
+    if [ -f /etc/os-release ]; then
         distro="$(grep -oP '(?<=^ID=).+' /etc/os-release | tr -d '"')"
     else
         # old distro versions may not follow the "os-release"
@@ -96,15 +96,11 @@ if [[ "$os" == "linux" ]]; then
 
     # append debian/ubuntu to their derivatives for pattern matching
     # so you can do '*ubuntu' which will match derivatives too
-    debian_derivatives=(ubuntu raspbian kali xbian)
-    ubuntu_derivatives=(pop xmint zorin elementary)
-    if [[ " ${debian_derivatives[*]} " =~ " ${distro} " ]]; then
-        os="linux_${distro}__debian"
-    elif [[ " ${ubuntu_derivatives[*]} " =~ " $distro " ]]; then
-        os="linux_${distro}__ubuntu"
-    else
-        os="linux_$distro"
-    fi
+    case "$distro" in
+        ubuntu | raspbian | kali | xbian) os="linux_${distro}__debian" ;;
+        pop | xmint | zorin | elementary) os="linux_${distro}__ubuntu" ;;
+        *) os="linux_$distro" ;;
+    esac
 fi
 
 echo "$os"
