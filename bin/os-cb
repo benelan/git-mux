@@ -5,57 +5,93 @@
 #
 # Uses `os-detect` to determine the operating system
 
-SHUTILS_STATE_DIR=${XDG_STATE_HOME:-$HOME/.local/state}/shutils
-mkdir "$SHUTILS_STATE_DIR" 2>/dev/null
+if [ -z "$OS_CB_LOGS" ]; then
+    if [ -d "$XDG_STATE_HOME" ]; then
+        SHUTILS_STATE_DIR="$XDG_STATE_HOME/shutils"
+    elif [ -d "$HOME/.local/state" ]; then
+        SHUTILS_STATE_DIR="$HOME/.local/state/shutils"
+    else
+        SHUTILS_STATE_DIR=${SHUTILS_DIR}/logs
+    fi
+    mkdir -p "$SHUTILS_STATE_DIR" 2>/dev/null
+    OS_CB_LOGS="$SHUTILS_STATE_DIR/os-cb.log"
+fi
+
+logs_enabled() {
+    [ -f "$OS_CB_LOGS" ] && [ "$OS_CB_LOGS" != "0" ]
+}
+
+logger() {
+    if logs_enabled; then
+        echo "$(date +%Y-%m-%dT%H:%M:%S 2>/dev/null) > $1" >>"$OS_CB_LOGS"
+    fi
+}
 
 linux_copy() {
     if is-supported xclip; then
+        logger "copy > using xclip"
         cat | xclip -selection clipboard
     elif is-supported xsel; then
+        logger "copy > using xsel"
         cat | xsel -bi
     elif is-supported wl-copy; then
+        logger "copy > using wl-copy"
         cat | wl-copy
     fi
 }
 
 linux_paste() {
     if is-supported xclip; then
+        logger "paste > using xclip"
         xclip -selection clipboard -o
     elif is-supported xsel; then
+        logger "paste > using xsel"
         xsel -bo
     elif is-supported wl-copy; then
+        logger "paste > using wl-copy"
         wl-paste
     fi
 }
 
 windows_wsl_copy() {
+    logger "copy > using clip.exe"
     cat | perl -pe 'chomp if eof' | /mnt/c/Windows/System32/clip.exe
 }
 
 windows_wsl_paste() {
+    logger "paste > using powershell.exe"
     /mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe Get-Clipboard | sed 's/\r//'
 }
 
 windows_cygwin_copy() {
+    logger "copy > using /dev/clipboard"
     cat >/dev/clipboard
 }
 
 windows_cygwin_paste() {
+    logger "paste > using /dev/clipboard"
     cat /dev/clipboard
 }
 
 osx_copy() {
+    logger "copy > using pbcopy"
     cat | pbcopy
 }
 
 osx_paste() {
+    logger "paste > using pbpaste"
     pbpaste
 }
 
 # https://sunaku.github.io/tmux-yank-osc52.html
 osc52_copy() {
+    logger "copy > using OSC 52"
     esc="\033]52;c;$(printf "%s" "$(cat "$@")" | head -c 74994 | base64 | tr -d '\r\n')\a"
-    test -n "$TMUX" -o -z "${TERM##screen*}" && esc="\033Ptmux;\033$esc\033\\"
+
+    if test -n "$TMUX" -o -z "${TERM##screen*}"; then
+        logger "copy > using OSC 52 > escaping tmux"
+        esc="\033Ptmux;\033$esc\033\\"
+    fi
     # shellcheck disable=2059
     printf "$esc"
 }
@@ -92,8 +128,10 @@ requested_open_ended() {
 enable_tee_like_chaining() {
     # see `man tee`
     if stdout_is_pipe_like; then
+        logger "copy > paste > stdout is pipe-like"
         "${_operating_system}_paste"
     elif requested_open_ended "$@"; then
+        logger "copy > paste > stdout is open-ended"
         "${_operating_system}_paste"
         echo
     fi
@@ -101,6 +139,7 @@ enable_tee_like_chaining() {
 
 prevent_prompt_from_being_on_the_same_line() {
     if stdout_is_a_tty; then
+        logger "paste > stdout is a TTY"
         # we don't have to be strict about not altering the output
         echo
     fi
@@ -122,29 +161,9 @@ test_suite() {
     printf '1234' | "$os_cb_cmd" | cat
 }
 
-debug() {
-    os_cb_logs="$SHUTILS_STATE_DIR/os_cb.log"
-    echo "operating_system: $_operating_system" >>"$os_cb_logs"
-    stdin_is_a_pipe &&
-        echo "stdin_is_a_pipe: 1" >>"$os_cb_logs" ||
-        echo "stdin_is_a_pipe: 0" >>"$os_cb_logs"
-    stdin_is_a_tty &&
-        echo "stdin_is_a_tty: 1" >>"$os_cb_logs" ||
-        echo "stdin_is_a_tty: 0" >>"$os_cb_logs"
-    stdin_is_pipe_like &&
-        echo "stdin_is_pipe_like: 1" >>"$os_cb_logs" ||
-        echo "stdin_is_pipe_like: 0" >>"$os_cb_logs"
-    stdout_is_pipe_like &&
-        echo "stdout_is_pipe_like: 1" >>"$os_cb_logs" ||
-        echo "stdout_is_pipe_like: 0" >>"$os_cb_logs"
-    stdout_is_a_tty &&
-        echo "stdout_is_a_tty: 1" >>"$os_cb_logs" ||
-        echo "stdout_is_a_tty: 0" >>"$os_cb_logs"
-    echo >>"$os_cb_logs"
-}
-
 main() {
     _operating_system="$(os-detect)"
+    logger "operating_system: $_operating_system"
     case "$_operating_system" in
         windows_cygwin | windows_wsl | osx) ;;
         linux*) _operating_system="linux" ;;
@@ -153,20 +172,26 @@ main() {
     esac
 
     if stdin_is_pipe_like; then
-        ssh_session && osc52_copy "$@"
+        logger "copy > stdin is pipe like"
+        if ssh_session; then
+            logger "copy > in ssh session"
+            osc52_copy "$@"
+        fi
+
         "${_operating_system}_copy"
         enable_tee_like_chaining "$@"
     else
+        logger "paste > stdin is not pipe like"
         "${_operating_system}_paste"
         prevent_prompt_from_being_on_the_same_line
     fi
 }
 
 if [ "$1" = "--test" ]; then
-    OS_CB_DEBUG="1" test_suite
+    test_suite
 else
-    if [ "$OS_CB_DEBUG" = "1" ] || [ "$1" = "--debug" ]; then
-        debug
+    if logs_enabled; then
+        echo "" >>"$OS_CB_LOGS"
     fi
     main "$@"
 fi
