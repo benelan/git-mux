@@ -12,7 +12,7 @@ Commands:
   h,  help        Show this message.
 
 Configuration:
-  See \`git mux help config\` for details.
+  See `git mux help config` for details.
 
 Examples:
   # Select a project and create or switch to its tmux session
@@ -35,5 +35,3 @@ Examples:
   # Run commands in a tmux window named npm_stuff without switching to it
   # Specifying a window name is required when sending commands
   git mux task ~/projects/my-app npm_stuff npm i && npm run build
-
-EOF
