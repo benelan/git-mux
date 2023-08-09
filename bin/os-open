@@ -13,8 +13,5 @@ case "$(os-detect)" in
     linux*) open_cmd="xdg-open" ;;
     *) echo "Unknown operating system and open command, please log an issue" && return 1 ;;
 esac
-if [ $# -eq 0 ]; then
-    "$open_cmd" .
-else
-    "$open_cmd" "$@"
-fi
+
+"$open_cmd" "${@:-.}"
