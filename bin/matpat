@@ -1,22 +1,17 @@
 #!/usr/bin/env sh
 set -o errexit
 
-COPY_CMD="${COPY_CMD:-os-cb}"
-OPEN_CMD="${OPEN_CMD:-os-open}"
-
-#
 # Outputs text matching a specified pattern.
-# https://github.com/benelan/dotfiles/blob/master/.dotfiles/bin/matpat
 #
-# The -y flag requires the following scripts:
-#   - `cb` to access the clipboard:
-#      https://github.com/benelan/dotfiles/blob/master/.dotfiles/bin/cb
-#   - `o` to open with the default system application:
-#      https://github.com/benelan/dotfiles/blob/master/.dotfiles/bin/o
-#   - `os-detect` to determine the commands to use in `cb` and `o`
-#      https://github.com/benelan/dotfiles/blob/master/.dotfiles/bin/os-detect
+# The -s flag requires the following scripts:
+#   - `os-cb`     to access the clipboard
+#   - `os-open`   to open with the default system application
+#   - `os-detect` to determine the operating system for the above scripts
 #
-# Alternatively set COPY_CMD and OPEN_CMD env vars for your operating system.
+# Alternatively set OS_COPY_CMD and OS_OPEN_CMD env vars for your operating system.
+# For example, on linux puth the following in your .bashrc (or equivalent):
+# export OS_COPY_CMD="xclip -selection clipboard"
+# export OS_OPEN_CMD="xdg-open"
 #
 # The MIT License (MIT)
 # Copyright (c) 2023-present Ben Elan
@@ -39,37 +34,31 @@ OPEN_CMD="${OPEN_CMD:-os-open}"
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+find_shutils_dir() {
+    __util_src="$0"
+    while [ -h "$__util_src" ]; do
+        __util_target="$(readlink "$__util_src")"
+        case $__util_target in
+            /*) __util_src="$__util_target" ;;
+            *) __util_src="$(dirname "$__util_src")/$__util_target" ;;
+        esac
+    done
+
+    cd -P "$(dirname "$__util_src")/.." >/dev/null 2>&1 && pwd
+}
+
+SHUTILS_DIR=${SHUTILS_DIR:-$(find_shutils_dir)}
+OS_COPY_CMD="${OS_COPY_CMD:-os-cb}"
+OS_OPEN_CMD="${OS_OPEN_CMD:-os-open}"
+
 # --------------------------------------------------------------------- }}}
 # Usage info                                                            {{{
 # --------------------------------------------------------------------- {|}
 
-usage() {
-    if [ -n "$1" ]; then
-        echo "$1"
-    fi
-    cat <<EOF
-Matches input text against the specified pattern.
-
-Usage:    matpat <arguments>
-
-Arguments:
-    t                      Get the text to match from tmux panes instead of stdin.
-    s                      Select a single match with fzf to yank or open instead
-                             of sending all matches to stdout.
-    p                      The pattern to match against (options specified below).
-                             fzf is used to choose a pattern if the flag is omitted.
-Patterns:
-  u,  uri,    url          Output all matched URIs (https://cht.sh or file://...)
-  i,  ip,     ip_address   Output all matched IP addresses (192.168.1.1)
-  s,  sha,    git_sha      Output all matched short or long Git SHAs (64945dd)
-  r,  range,  git_range    Output all matched Git SHA ranges (123456..654321)
-
-Examples:
-  # get all IP addresses from a log file (omit the arg to pick a pattern interactively)
-      cat logs/access.log | matpat -p ip
-  # get URIs from tmux panes and select one using fzf to open or copy to clipboard
-      matpat -ytp u
-EOF
+help() {
+    [ -n "$*" ] && echo "$*"
+    [ -f "$SHUTILS_DIR/docs/matpat.txt" ] &&
+        cat "$SHUTILS_DIR/docs/matpat.txt"
     exit 1
 }
 
@@ -110,8 +99,8 @@ select_match() {
         uniq |
         fzf --no-multi --no-exit-0 --no-select-1 \
             --header='(ctrl-y:copy) (ctrl-o:open) (enter:stdout)' \
-            --bind "ctrl-o:execute($OPEN_CMD {})+accept" \
-            --bind "ctrl-y:execute(echo {} | ${COPY_CMD})+accept"
+            --bind "ctrl-o:execute($OS_OPEN_CMD {})+accept" \
+            --bind "ctrl-y:execute(echo {} | $OS_COPY_CMD)+accept"
 }
 
 select_pattern() {
@@ -125,7 +114,7 @@ select_pattern() {
 
 match_pattern() {
     if [ -z "$1" ]; then
-        usage "No pattern specified."
+        help "No pattern specified."
     fi
     if [ -n "$_tmux_mode" ]; then
         _matches=$(for pane in $(tmux list-pane -a -F "#S:#I.#P"); do
@@ -155,7 +144,7 @@ stdin_is_pipe_like() { [ -p /dev/stdin ] || ! [ -t 0 ]; }
 main() {
     # Print usage info if `matpat` is called with no args, unless stdin
     # is piped, in which case prompt the user to select a pattern.
-    ! stdin_is_pipe_like && [ -z "$1" ] && usage
+    ! stdin_is_pipe_like && [ -z "$1" ] && help
     _pattern="select"
 
     # Automatically turn on tmux mode if attached and stdin is
@@ -164,11 +153,11 @@ main() {
 
     while getopts p:ths opt; do
         case $opt in
-            h) usage ;;
+            h) help ;;
             p) _pattern="$OPTARG" ;;
             t) _tmux_mode=1 ;;
             s) _select_mode=1 ;;
-            *) usage "Invalid flag: $opt" ;;
+            *) help "Invalid flag: $opt" ;;
         esac
     done
 
@@ -180,7 +169,7 @@ main() {
         s | sha | git_sha) match_pattern git_sha ;;
         u | uri | url) match_pattern uri ;;
         select) match_pattern "$(select_pattern)" ;;
-        *) usage "Unknown pattern: $_pattern" ;;
+        *) help "Unknown pattern: $_pattern" ;;
     esac
 }
 
