@@ -7,24 +7,21 @@
 
 if [ -z "$OS_CB_LOGS" ]; then
     if [ -d "$XDG_STATE_HOME" ]; then
-        SHUTILS_STATE_DIR="$XDG_STATE_HOME/shutils"
+        OS_CB_LOGS="$XDG_STATE_HOME/shutils/os-cb.log"
     elif [ -d "$HOME/.local/state" ]; then
-        SHUTILS_STATE_DIR="$HOME/.local/state/shutils"
+        OS_CB_LOGS="$HOME/.local/state/shutils/os-cb.log"
     else
-        SHUTILS_STATE_DIR=${SHUTILS_DIR}/logs
+        OS_CB_LOGS="${SHUTILS_DIR}/logs/os-cb.log"
     fi
-    mkdir -p "$SHUTILS_STATE_DIR" 2>/dev/null
-    OS_CB_LOGS="$SHUTILS_STATE_DIR/os-cb.log"
+    mkdir -p "$(dirname "$OS_CB_LOGS")"
+elif [ "$OS_CB_LOGS" = "0" ]; then
+    OS_CB_LOGS="/dev/null"
+else
+    mkdir -p "$(dirname "$OS_CB_LOGS")"
 fi
 
-logs_enabled() {
-    [ -f "$OS_CB_LOGS" ] && [ "$OS_CB_LOGS" != "0" ]
-}
-
 logger() {
-    if logs_enabled; then
-        echo "$(date +%Y-%m-%dT%H:%M:%S 2>/dev/null) > $1" >>"$OS_CB_LOGS"
-    fi
+    echo "$(date +%Y-%m-%dT%H:%M:%S 2>>"$OS_CB_LOGS") > $1" >>"$OS_CB_LOGS"
 }
 
 linux_copy() {
@@ -162,11 +159,11 @@ test_suite() {
 }
 
 main() {
-    _operating_system="$(os-detect)"
-    logger "operating_system: $_operating_system"
-    case "$_operating_system" in
+    operating_system="$(os-detect)"
+    logger "operating_system: $operating_system"
+    case "$operating_system" in
         windows_cygwin | windows_wsl | osx) ;;
-        linux*) _operating_system="linux" ;;
+        linux*) operating_system="linux" ;;
         # exit if the OS is not supported
         *) echo "operating system not supported, please log an issue" && return 1 ;;
     esac
@@ -178,11 +175,11 @@ main() {
             osc52_copy "$@"
         fi
 
-        "${_operating_system}_copy"
+        "${operating_system}_copy"
         enable_tee_like_chaining "$@"
     else
         logger "paste > stdin is not pipe like"
-        "${_operating_system}_paste"
+        "${operating_system}_paste"
         prevent_prompt_from_being_on_the_same_line
     fi
 }
@@ -190,8 +187,6 @@ main() {
 if [ "$1" = "--test" ]; then
     test_suite
 else
-    if logs_enabled; then
-        echo "" >>"$OS_CB_LOGS"
-    fi
+    echo "" >>"$OS_CB_LOGS"
     main "$@"
 fi
