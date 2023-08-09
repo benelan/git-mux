@@ -42,14 +42,17 @@ SHUTILS_DIR=${SHUTILS_DIR:-$(find_shutils_dir)}
 
 if [ -z "$GIT_MUX_LOGS" ]; then
     if [ -d "$XDG_STATE_HOME" ]; then
-        SHUTILS_STATE_DIR="$XDG_STATE_HOME/shutils"
+        GIT_MUX_LOGS="$XDG_STATE_HOME/shutils/git-mux.log"
     elif [ -d "$HOME/.local/state" ]; then
-        SHUTILS_STATE_DIR="$HOME/.local/state/shutils"
+        GIT_MUX_LOGS="$HOME/.local/state/shutils/git-mux.log"
     else
-        SHUTILS_STATE_DIR=${SHUTILS_DIR}/logs
+        GIT_MUX_LOGS="${SHUTILS_DIR}/logs/git-mux.log"
     fi
-    mkdir -p "$SHUTILS_STATE_DIR" 2>/dev/null
-    GIT_MUX_LOGS="$SHUTILS_STATE_DIR/git-mux.log"
+    mkdir -p "$(dirname "$GIT_MUX_LOGS")"
+elif [ "$GIT_MUX_LOGS" = "0" ]; then
+    GIT_MUX_LOGS="/dev/null"
+else
+    mkdir -p "$(dirname "$GIT_MUX_LOGS")"
 fi
 
 # --------------------------------------------------------------------- }}}
@@ -67,14 +70,8 @@ help() {
     fi
 }
 
-logs_enabled() {
-    [ -f "$GIT_MUX_LOGS" ] && [ "$GIT_MUX_LOGS" != "0" ]
-}
-
 logger() {
-    if logs_enabled; then
-        echo "$(date +%Y-%m-%dT%H:%M:%S 2>/dev/null) > $1" >>"$GIT_MUX_LOGS"
-    fi
+    echo "$(date +%Y-%m-%dT%H:%M:%S 2>/dev/null) > $1" >>"$GIT_MUX_LOGS"
 }
 
 config_values() {
@@ -96,6 +93,7 @@ $GIT_MUX_NEW_WORKTREE_CMD
 
 ========= GIT_MUX_LOGS =========
 $GIT_MUX_LOGS
+
 EOF
 }
 
@@ -306,7 +304,7 @@ git_task() {
         logger "task > sanitized task name: $task_name"
 
         # naively assumes a bare repo will be using worktrees
-        if [ "$(git rev-parse --is-bare-repository 2>/dev/null)" = "true" ]; then
+        if [ "$(git rev-parse --is-bare-repository 2>>"$GIT_MUX_LOGS")" = "true" ]; then
             logger "task > project is bare repo, using git-worktree"
             task_start_dir="$task_start_dir/$task_name"
 
@@ -314,13 +312,13 @@ git_task() {
             if [ ! -d "$task_start_dir" ]; then
                 logger "task > worktree does not exist, adding now"
                 # shellcheck disable=2086
-                git worktree add $task_name $task_branch_flags $task_branch
+                git worktree add $task_name $task_branch_flags $task_branch >>"$GIT_MUX_LOGS" 2>&1
                 export GIT_MUX_NEW_WORKTREE="1"
             fi
         else
             logger "task > checking out branch"
             # shellcheck disable=2086
-            git checkout $task_branch_flags $task_branch
+            git checkout $task_branch_flags $task_branch >>"$GIT_MUX_LOGS" 2>&1
         fi
 
         handle_task "$task_start_dir" \
@@ -331,13 +329,13 @@ git_task() {
 }
 
 is_git_root_dir() {
-    git_dir="$(git rev-parse --path-format=relative --git-dir 2>/dev/null)"
+    git_dir="$(git rev-parse --path-format=relative --git-dir 2>>"$GIT_MUX_LOGS")"
     # normal repos
     [ "$git_dir" = ".git" ] ||
         # bare repos
         [ "$git_dir" = "." ] ||
         # just for safsies
-        [ "$(git rev-parse --path-format=absolute --show-toplevel 2>/dev/null)" = "${1:-$(pwd)}" ]
+        [ "$(git rev-parse --path-format=absolute --show-toplevel 2>>"$GIT_MUX_LOGS")" = "${1:-$(pwd)}" ]
 }
 
 # Use $GIT_MUX_SELECT_CMD to select an existing git branch for creating a task.
@@ -392,6 +390,6 @@ main() {
 # --------------------------------------------------------------------- }}}
 
 # add blank line to separate runs in the logs
-logs_enabled && echo "" >>"$GIT_MUX_LOGS"
+echo "" >>"$GIT_MUX_LOGS"
 
 main "$@"
