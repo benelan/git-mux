@@ -46,7 +46,7 @@ if [ -z "$GIT_MUX_LOGS" ]; then
     elif [ -d "$HOME/.local/state" ]; then
         GIT_MUX_LOGS="$HOME/.local/state/shutils/git-mux.log"
     else
-        GIT_MUX_LOGS="${SHUTILS_DIR}/logs/git-mux.log"
+        GIT_MUX_LOGS="${HOME:-~}/.shutils/git-mux.log"
     fi
     mkdir -p "$(dirname "$GIT_MUX_LOGS")"
 elif [ "$GIT_MUX_LOGS" = "0" ]; then
@@ -74,7 +74,7 @@ logger() {
     echo "$(date +%Y-%m-%dT%H:%M:%S 2>/dev/null) > $1" >>"$GIT_MUX_LOGS"
 }
 
-config_values() {
+log_config_values() {
     cat <<EOF
 ========= GIT_MUX_PROJECT_PARENTS =========
 $GIT_MUX_PROJECT_PARENTS
@@ -95,6 +95,7 @@ $GIT_MUX_NEW_WORKTREE_CMD
 $GIT_MUX_LOGS
 
 EOF
+    exit 0
 }
 
 sanitize_name() {
@@ -353,38 +354,28 @@ select_branch() {
 # --------------------------------------------------------------------- {|}
 
 main() {
-    if [ -n "$1" ]; then
-        case $1 in
-            c | clone)
-                shift
-                bare_clone "$@"
-                ;;
-            config)
-                config_values
-                exit 0
-                ;;
-            p | project)
-                shift
-                handle_project "$@"
-                ;;
-            t | task)
-                shift
-                handle_task "$@"
-                ;;
-            h | help | -h | --help)
-                shift
-                help "$@"
-                ;;
-            *)
-                echo "Invalid command: $1"
-                help
-                exit 1
-                ;;
-        esac
-    else
+    command="$1"
+    if [ -z "$command" ]; then
+        logger "INFO: No command provided, logging usage message and exiting"
         help
         exit 1
     fi
+    shift
+    case $command in
+        config) log_config_values ;;
+        c | clone) bare_clone "$@" ;;
+        p | project) handle_project "$@" ;;
+        t | task) handle_task "$@" ;;
+        h | help | -h | --help) help "$@" ;;
+        *)
+            logger "ERROR: Invalid command \"$command\""
+            printf "%s \"%s\"\n%s\n" \
+                "Error: Invalid command" \
+                "$command" \
+                "See \`git mux help\` for usage information."
+            exit 1
+            ;;
+    esac
 }
 
 # --------------------------------------------------------------------- }}}

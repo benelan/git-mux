@@ -11,7 +11,7 @@ if [ -z "$OS_CB_LOGS" ]; then
     elif [ -d "$HOME/.local/state" ]; then
         OS_CB_LOGS="$HOME/.local/state/shutils/os-cb.log"
     else
-        OS_CB_LOGS="${SHUTILS_DIR}/logs/os-cb.log"
+        OS_CB_LOGS="${HOME:-~}/.shutils/os-cb.log"
     fi
     mkdir -p "$(dirname "$OS_CB_LOGS")"
 elif [ "$OS_CB_LOGS" = "0" ]; then

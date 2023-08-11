@@ -34,54 +34,72 @@ set -o errexit
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-OS_COPY_CMD="${OS_COPY_CMD:-os-cb}"
-OS_OPEN_CMD="${OS_OPEN_CMD:-os-open}"
-
-find_shutils_dir() {
-    __util_src="$0"
-    while [ -h "$__util_src" ]; do
-        __util_target="$(readlink "$__util_src")"
-        case $__util_target in
-            /*) __util_src="$__util_target" ;;
-            *) __util_src="$(dirname "$__util_src")/$__util_target" ;;
-        esac
-    done
-
-    cd -P "$(dirname "$__util_src")/.." >/dev/null 2>&1 && pwd
-}
-
-SHUTILS_DIR=${SHUTILS_DIR:-$(find_shutils_dir)}
-
-if [ -z "$MATPAT_LOGS" ]; then
-    if [ -d "$XDG_STATE_HOME" ]; then
-        MATPAT_LOGS="$XDG_STATE_HOME/shutils/matpat.log"
-    elif [ -d "$HOME/.local/state" ]; then
-        MATPAT_LOGS="$HOME/.local/state/shutils/matpat.log"
-    else
-        MATPAT_LOGS="${SHUTILS_DIR}/logs/matpat.log"
-    fi
-    echo "$MATPAT_LOGS"
-    mkdir -p "$(dirname "$MATPAT_LOGS")"
-elif [ "$MATPAT_LOGS" = "0" ]; then
-    MATPAT_LOGS="/dev/null"
-else
-    echo "$MATPAT_LOGS"
-    mkdir -p "$(dirname "$MATPAT_LOGS")"
-fi
-
-logger() {
-    echo "$(date +%Y-%m-%dT%H:%M:%S 2>>"$MATPAT_LOGS") > $1" >>"$MATPAT_LOGS"
-}
-
 # --------------------------------------------------------------------- }}}
 # Usage info                                                            {{{
 # --------------------------------------------------------------------- {|}
 
 help() {
     [ -n "$*" ] && echo "$*"
-    [ -f "$SHUTILS_DIR/docs/matpat.txt" ] &&
-        cat "$SHUTILS_DIR/docs/matpat.txt"
+    cat <<EOF
+Matches input text against the specified pattern.
+
+Usage:    matpat <arguments>
+
+Flags:
+    -t                     Get the text to match from tmux panes instead of stdin.
+
+    -s                     Select a single match with fzf to yank or open instead
+                           of sending all matches to stdout.
+
+    -p                     The pattern to match against (options specified below).
+                           fzf is used to choose a pattern if the flag is omitted.
+
+    -h                     Show this message.
+
+Patterns:
+  u,  uri,    url          Output all matched URIs (https://cht.sh or file://...)
+
+  i,  ip,     ip_address   Output all matched IP addresses (192.168.1.1)
+
+  s,  sha,    git_sha      Output all matched short or long Git SHAs (64945dd)
+
+  r,  range,  git_range    Output all matched Git SHA ranges (123456..654321)
+
+Examples:
+  # get all IP addresses from a log file (omit the args to pick a pattern interactively)
+  cat logs/access.log | matpat -p ip
+
+  # get URIs from tmux panes and select one using fzf to open or copy to clipboard
+  matpat -stp u
+
+EOF
     exit 1
+}
+
+# --------------------------------------------------------------------- }}}
+# Configuration                                                         {{{
+# --------------------------------------------------------------------- {|}
+
+OS_COPY_CMD="${OS_COPY_CMD:-os-cb}"
+OS_OPEN_CMD="${OS_OPEN_CMD:-os-open}"
+
+if [ -z "$MATPAT_LOGS" ]; then
+    if [ -d "$XDG_STATE_HOME" ]; then
+        MATPAT_LOGS="$XDG_STATE_HOME/shutils/matpat.log"
+    elif [ -d "$HOME/.local/state" ]; then
+        MATPAT_LOGS="${HOME:-~}/.local/state/shutils/matpat.log"
+    else
+        MATPAT_LOGS="${HOME:-~}/.shutils/matpat.log"
+    fi
+    mkdir -p "$(dirname "$MATPAT_LOGS")"
+elif [ "$MATPAT_LOGS" = "0" ]; then
+    MATPAT_LOGS="/dev/null"
+else
+    mkdir -p "$(dirname "$MATPAT_LOGS")"
+fi
+
+logger() {
+    echo "$(date +%Y-%m-%dT%H:%M:%S 2>>"$MATPAT_LOGS") > $1" >>"$MATPAT_LOGS"
 }
 
 # --------------------------------------------------------------------- }}}
