@@ -1,8 +1,7 @@
 #!/usr/bin/env sh
 set -e
 
-# --------------------------------------------------------------------- }}}
-# Config                                                                {{{
+# Configuration                                                         {{{
 # --------------------------------------------------------------------- {|}
 
 if [ -z "$GIT_MUX_SELECT_CMD" ] && ! command -v fzf >/dev/null 2>&1; then
@@ -24,54 +23,48 @@ GIT_MUX_PROJECTS=${GIT_MUX_PROJECTS:-$(
     find $GIT_MUX_PROJECT_PARENTS -maxdepth 1 -mindepth 1 -type d
 )}
 
-# https://github.com/bigH/git-fuzzy/blob/main/bin/git-fuzzy
-find_shutils_dir() {
-    shutil_src="$0"
-    while [ -h "$shutil_src" ]; do
-        shutil_target="$(readlink "$shutil_src")"
-        case $shutil_target in
-            /*) shutil_src="$shutil_target" ;;
-            *) shutil_src="$(dirname "$shutil_src")/$shutil_target" ;;
-        esac
-    done
-
-    cd -P "$(dirname "$shutil_src")/.." >/dev/null 2>&1 && pwd
-}
-
-SHUTILS_DIR=${SHUTILS_DIR:-$(find_shutils_dir)}
-
-if [ -z "$GIT_MUX_LOGS" ]; then
+if [ "$GIT_MUX_LOGS" = "1" ]; then
     if [ -d "$XDG_STATE_HOME" ]; then
-        GIT_MUX_LOGS="$XDG_STATE_HOME/shutils/git-mux.log"
+        GIT_MUX_LOGS="$XDG_STATE_HOME/git-mux/logs"
     elif [ -d "$HOME/.local/state" ]; then
-        GIT_MUX_LOGS="$HOME/.local/state/shutils/git-mux.log"
+        GIT_MUX_LOGS="$HOME/.local/state/git-mux/logs"
     else
-        GIT_MUX_LOGS="${HOME:-~}/.shutils/git-mux.log"
+        GIT_MUX_LOGS="${HOME:-~}/.git-mux/logs"
     fi
-    mkdir -p "$(dirname "$GIT_MUX_LOGS")"
-elif [ "$GIT_MUX_LOGS" = "0" ]; then
-    GIT_MUX_LOGS="/dev/null"
-else
-    mkdir -p "$(dirname "$GIT_MUX_LOGS")"
 fi
 
-# --------------------------------------------------------------------- }}}
-# Utils                                                                 {{{
-# --------------------------------------------------------------------- {|}
+[ -n "$GIT_MUX_LOGS" ] && [ "$GIT_MUX_LOGS" != "0" ] &&
+    mkdir -p "$(dirname "$GIT_MUX_LOGS")"
 
+# --------------------------------------------------------------------- }}}
+# Usage info and logs                                                   {{{
+# --------------------------------------------------------------------- {|}
 help() {
-    if [ -z "$1" ] && [ -f "$SHUTILS_DIR/docs/git-mux.txt" ]; then
-        cat "$SHUTILS_DIR/docs/git-mux.txt"
-    elif [ -n "$1" ] && [ -f "$SHUTILS_DIR/docs/git-mux-$1.txt" ]; then
-        cat "$SHUTILS_DIR/docs/git-mux-$1.txt"
-    else
-        printf "%s\n" "Error: no documentation found for git mux $1"
-        exit 1
+    if [ -z "$1" ]; then
+        man git-mux
+        exit 0
     fi
+    case $1 in
+        config | clone | project | task) man "git-mux-$1" ;;
+        *)
+            logger "ERROR" "no man page found for \"git-mux-$1$command\""
+            printf "%s \"%s\"\n%s\n" \
+                "Error: no man page found for" \
+                "git-mux-$1" \
+                "See \`git mux help\` for usage information."
+            exit 1
+            ;;
+    esac
 }
 
 logger() {
-    echo "$(date +%Y-%m-%dT%H:%M:%S 2>/dev/null) > $1" >>"$GIT_MUX_LOGS"
+    if [ -n "$GIT_MUX_LOGS" ] && [ "$GIT_MUX_LOGS" != "0" ]; then
+        printf "%s | %s | %s" \
+            "$1" \
+            "$(date +%Y-%m-%dT%H:%M:%S 2>/dev/null)" \
+            "$2" \
+            >>"$GIT_MUX_LOGS"
+    fi
 }
 
 log_config_values() {
@@ -98,6 +91,10 @@ EOF
     exit 0
 }
 
+# --------------------------------------------------------------------- }}}
+# Util functions                                                        {{{
+# --------------------------------------------------------------------- {|}
+
 sanitize_name() {
     basename "$1" | tr "./" "__"
 }
@@ -120,13 +117,13 @@ tmux_create_if_needed_and_attach() {
     project_name="$(sanitize_name "$project_path")"
     if in_tmux; then
         if ! tmux_session_exists "$project_name"; then
-            logger "project > creating \"$project_name\" at path \"$project_path\""
+            logger "INFO " "project > creating \"$project_name\" at path \"$project_path\""
             tmux new-session -Adc "$project_path" -s "$project_name"
         fi
-        logger "project > switching to \"$project_name\" at path \"$project_path\""
+        logger "INFO " "project > switching to \"$project_name\" at path \"$project_path\""
         tmux switch-client -t "$project_name"
     else
-        logger "project > creating or attaching to \"$project_name\" at path \"$project_path\""
+        logger "INFO " "project > creating or attaching to \"$project_name\" at path \"$project_path\""
         tmux new-session -As "$project_name" -c "$project_path"
     fi
     unset project_path project_name
@@ -135,7 +132,7 @@ tmux_create_if_needed_and_attach() {
 has_tmux_server && GIT_MUX_TMUX_SESSION="$(tmux display-message -p "#S")"
 
 # --------------------------------------------------------------------- }}}
-# Clone                                                                 {{{
+# Clone command                                                         {{{
 # --------------------------------------------------------------------- {|}
 
 # Clones a bare repo for use with git-worktree and creates an
@@ -146,7 +143,7 @@ bare_clone() {
     mkdir -p "$new_repo_dir"
     cd "$new_repo_dir" || return
 
-    logger "clone > cloning bare repo for \"$1\" in \"$(pwd)\""
+    logger "INFO " "clone > cloning bare repo for \"$1\" in \"$(pwd)\""
     git clone --bare "$1" .git
     git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
     git fetch origin
@@ -158,14 +155,14 @@ bare_clone() {
         )" | grep "HEAD branch" | cut -d" " -f5
     )"
 
-    logger "clone > creating worktree for default branch: $default_branch"
+    logger "INFO " "clone > creating worktree for default branch: $default_branch"
     git worktree add "$default_branch" "$default_branch"
     cd "$default_branch" || return
     unset new_repo_dir default_branch
 }
 
 # --------------------------------------------------------------------- }}}
-# Project                                                               {{{
+# Project command                                                       {{{
 # --------------------------------------------------------------------- {|}
 
 # See `git mux help config`
@@ -177,38 +174,43 @@ select_project() { printf "%s\n" $GIT_MUX_PROJECTS | $GIT_MUX_SELECT_CMD; }
 # to select a project.
 handle_project() {
     if [ -n "$1" ] && [ -d "$1" ]; then
-        logger "project > valid path provided: \"$1\""
+        logger "INFO " "project > valid path provided: \"$1\""
         tmux_create_if_needed_and_attach "$1"
     else
-        logger "project > a valid path was not provided, selecting a project"
+        logger "INFO " "project > a valid path was not provided, interactively selecting a project"
         tmux_create_if_needed_and_attach "$(select_project)"
     fi
 }
 
+# --------------------------------------------------------------------- }}}
+# Task command                                                          {{{
+# --------------------------------------------------------------------- {|}
+
 # Determines the absolute path of the selected or provided project.
 find_project_directory() {
+    logger "DEBUG" "task > checking project names for a match with the tmux session: \"$GIT_MUX_TMUX_SESSION\""
     # check if the tmux session name is one of the projects
     for project in $GIT_MUX_PROJECTS; do
         if [ "$(
             sanitize_name "$(basename "$project")"
         )" = "$GIT_MUX_TMUX_SESSION" ]; then
+            logger "DEBUG" "task > found a matching project: \"$project\""
             echo "$project"
             unset project
             return
         fi
     done
 
-    # select a project if in the home session
+    logger "WARN " "task > no matching project found"
     if [ "$(sanitize_name "$(basename ~)")" = "$GIT_MUX_TMUX_SESSION" ]; then
+        logger "DEBUG" "task > currently in home session, interactively selecting a project"
         select_project && return
     else
+        logger "DEBUG" "task > using current directory as project"
         pwd
     fi
 }
 
-# --------------------------------------------------------------------- }}}
-# Task                                                                  {{{
-# --------------------------------------------------------------------- {|}
 
 # Attaches/switches to a tmux window. If the next argument is a valid path,
 # the window is created in that directory. If there are arguments after the
@@ -233,7 +235,7 @@ find_project_directory() {
 # Uses $GIT_MUX_SELECT_CMD to select an existing branch.
 # $ git mux t
 handle_task() {
-    logger "task > args: $*"
+    logger "DEBUG" "task > args: $*"
     # Check if the provided argument is a valid path
     if [ -n "$1" ] && [ -d "$1" ]; then
         task_dir="$(cd "$1" && pwd)"
@@ -243,7 +245,7 @@ handle_task() {
         return 0
     fi
 
-    logger "task > creating new \"$task_name\" task in \"$task_dir\""
+    logger "INFO " "task > creating new \"$task_name\" task in \"$task_dir\""
     # Not using new-window's -S flag for backwards compatibility
     if ! tmux list-windows | grep -q "$task_name"; then
         tmux new-window -dn "$task_name" -c "$task_dir"
@@ -251,7 +253,7 @@ handle_task() {
 
     # if provided, execute commands in the tmux window for new worktrees
     if [ -n "$GIT_MUX_NEW_WORKTREE" ] && [ -n "$GIT_MUX_NEW_WORKTREE_CMD" ]; then
-        logger "task > executing new worktree command \"$GIT_MUX_NEW_WORKTREE_CMD\""
+        logger "INFO " "task > executing GIT_MUX_NEW_WORKTREE_CMD: \"$GIT_MUX_NEW_WORKTREE_CMD\""
         tmux send-keys -t "$GIT_MUX_TMUX_SESSION:$task_name" \
             "$GIT_MUX_NEW_WORKTREE_CMD" Enter
         unset GIT_MUX_NEW_WORKTREE
@@ -260,13 +262,13 @@ handle_task() {
     # Attach, switch, or send keys to the new task
     if [ -n "$3" ]; then
         shift 2
-        logger "task > executing command (not attaching/switching): \"$*\""
+        logger "INFO " "task > executing command (not attaching/switching tmux windows): \"$*\""
         tmux send-keys -t "$GIT_MUX_TMUX_SESSION:$task_name" "$*" Enter
     elif [ -n "$TMUX" ]; then
-        logger "task > switching client"
+        logger "INFO " "task > switching tmux client"
         tmux switch-client -t "$GIT_MUX_TMUX_SESSION:$task_name"
     else
-        logger "task > attaching"
+        logger "INFO " "task > attaching to tmux session"
         tmux attach -t "$GIT_MUX_TMUX_SESSION:$task_name"
     fi
 
@@ -278,48 +280,48 @@ handle_task() {
 git_task() {
     task_start_dir="$(find_project_directory)"
 
-    logger "task > project's directory: $task_start_dir"
+    logger "INFO " "task > project's directory: $task_start_dir"
     cd "$task_start_dir" || return 1
 
     if is_git_root_dir "$task_start_dir"; then
         if [ -n "$1" ]; then
             task_branch="$1"
             shift
-            logger "task > provided branch: $task_branch"
+            logger "INFO " "task > provided branch: $task_branch"
 
             if ! git show-ref --verify --quiet "refs/heads/$task_branch"; then
                 task_branch_flags="-b"
 
-                logger "task > branch not found and will be created"
+                logger "DEBUG" "task > branch not found and will be created"
                 if [ "${task_branch#*"/"}" = "$task_branch" ]; then
                     task_branch="$GIT_MUX_BRANCH_PREFIX/$task_branch"
-                    logger "task > added prefix to branch: $task_branch"
+                    logger "DEBUG" "task > added prefix to branch: $task_branch"
                 fi
             fi
         else
             task_branch=$(select_branch)
-            logger "task > selected branch: $task_branch"
+            logger "INFO " "task > selected branch: $task_branch"
         fi
 
         task_name="$(sanitize_name "$task_branch")"
-        logger "task > sanitized task name: $task_name"
+        logger "DEBUG" "task > sanitized task name: $task_name"
 
         # naively assumes a bare repo will be using worktrees
         if [ "$(git rev-parse --is-bare-repository 2>>"$GIT_MUX_LOGS")" = "true" ]; then
-            logger "task > project is bare repo, using git-worktree"
+            logger "DEBUG" "task > project is bare repo, using git-worktree"
             task_start_dir="$task_start_dir/$task_name"
 
-            logger "task > worktree directory: $task_start_dir"
+            logger "INFO " "task > worktree directory: $task_start_dir"
             if [ ! -d "$task_start_dir" ]; then
-                logger "task > worktree does not exist, adding now"
+                logger "INFO " "task > worktree does not exist, adding now"
                 # shellcheck disable=2086
-                git worktree add $task_name $task_branch_flags $task_branch >>"$GIT_MUX_LOGS" 2>&1
+                git worktree add $task_name $task_branch_flags $task_branch
                 export GIT_MUX_NEW_WORKTREE="1"
             fi
         else
-            logger "task > checking out branch"
+            logger "INFO " "task > checking out branch"
             # shellcheck disable=2086
-            git checkout $task_branch_flags $task_branch >>"$GIT_MUX_LOGS" 2>&1
+            git checkout $task_branch_flags $task_branch
         fi
 
         handle_task "$task_start_dir" \
@@ -350,13 +352,13 @@ select_branch() {
 }
 
 # --------------------------------------------------------------------- }}}
-# Parse args                                                            {{{
+# Parse arguments                                                       {{{
 # --------------------------------------------------------------------- {|}
 
 main() {
     command="$1"
     if [ -z "$command" ]; then
-        logger "INFO: No command provided, logging usage message and exiting"
+        logger "INFO " "No command provided, logging usage message and exiting"
         help
         exit 1
     fi
@@ -368,7 +370,7 @@ main() {
         t | task) handle_task "$@" ;;
         h | help | -h | --help) help "$@" ;;
         *)
-            logger "ERROR: Invalid command \"$command\""
+            logger "ERROR" "invalid command: \"$command\""
             printf "%s \"%s\"\n%s\n" \
                 "Error: Invalid command" \
                 "$command" \
@@ -381,6 +383,6 @@ main() {
 # --------------------------------------------------------------------- }}}
 
 # add blank line to separate runs in the logs
-echo "" >>"$GIT_MUX_LOGS"
+logger "\nINFO " "START > args: $*"
 
 main "$@"
