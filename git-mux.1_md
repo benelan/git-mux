@@ -53,7 +53,7 @@
     Otherwise assume it is a *branch-name*, creating the **git-branch**(1) if it doesn't exist.
     If the **project** is a bare repo, create and/or switch to its **git-worktree**(1).
     Otherwise checkout the branch.
-  
+
     By default, all of the above cases create and/or switch to a **tmux**(1) window
     named "123", via **basename**(1). The **tmux**(1) *window-name* can be specified
     with an additional argument.
@@ -96,7 +96,7 @@
 **GIT_MUX_NEW_WORKTREE_CMD**
 :   Specify a set of commands to execute in the **tmux**(1) window when a new
     **git-worktree**(1) is created via the **task** command. Unset by default.
-  
+
     For example: **"[ -f './package.json' ] && npm i"**
 
 **GIT_MUX_LOGS**
@@ -129,4 +129,3 @@ https://github.com/benelan/git-mux/issues
 # SEE ALSO
 
 **git-repository-layout**(7), **git-worktree**(1), **tmux**(1), **fzf**(1)
-

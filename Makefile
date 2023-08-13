@@ -6,7 +6,7 @@ DOCDIR ?= $(PREFIX)/share/doc/$(PROGRAM)
 all: man
 	@echo Run \'make install\' to install $(PROGRAM).
 
-man: $(PROGRAM).1.md
+man: $(PROGRAM).1_md
 	@mkdir -p $(MANDIR)
 	@pandoc --standalone --from markdown-smart --to man $< --output $(MANDIR)/$(PROGRAM).1
 
