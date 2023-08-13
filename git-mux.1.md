@@ -1,137 +1,132 @@
 % git-mux(1) git-mux user manual
 % Ben Elan <no-reply@benelan.dev>
-% Aug 9, 2023
+% 2023-08-12
 
 # NAME
 
-__git-mux__ - a git + tmux lovechild for blazingly fast movement between projects and tasks.
+**git-mux** - a git + tmux lovechild for blazingly fast movement between projects and tasks
 
 # SYNOPSIS
 
-__git mux clone__ _repository_
-
-__git mux project__ [_path_]
-
-__git mux task__ [_branch-name_] [_window-name_]
-
-__git mux task__ _path_ [_window-name_] [_remote-command_...]
-
-__git mux config__
-
-__git mux help__
+**git mux clone** *repository*  
+**git mux project** [*path*]  
+**git mux task** [*branch-name*] [*window-name*]  
+**git mux task** *path* [*window-name*] [*remote-command*...]  
+**git mux config**  
+**git mux help**  
 
 # COMMANDS
 
-__c__, __clone__
-: Clone and configure a bare __git__(1) _repository_ for use with worktrees.
+**c**, **clone**
+:   Clone and configure a bare **git**(1) *repository* for use with worktrees.
 
-__p__, ___project___
-:   Create or switch to a __project__, which is a __tmux__(1) session.
-    Projects are also usually (but not required to be) a __git__(1) repo.
+**p**, **project**
+:   Create or switch to a **project**, which is a **tmux**(1) session.
+    Projects are also usually (but not required to be) a **git**(1) repo.
 
-__t__, ___task___
-:   Create, switch, or send text to a __task__, which is a __tmux__(1) window.
-    Tasks are also usually (but not required to be) a __git-worktree__(1)
-    or __git-branch__(1).
+**t**, **task**
+:   Create, switch, or send text to a **task**, which is a **tmux**(1) window.
+    Tasks are also usually (but not required to be) a **git-worktree**(1)
+    or **git-branch**(1).
 
-__h__, __help__
-:   Print a concise help message to __stdout__(3).
+**h**, **help**
+:   Print a concise help message to **stdout**(3).
 
-__config__
-:   Print the current configuration values to __stdout__(3).
-    See the _ENVIRONMENT_ section for configuration options.
+**config**
+:   Print the current configuration values to **stdout**(3).
+    See the *ENVIRONMENT* section for configuration options.
 
 # EXAMPLES
 
-__git mux p__
-:   Select a __project__, then create and/or switch to its __tmux__(1) session.
+**git mux p**
+:   Select a **project**, then create and/or switch to its **tmux**(1) session.
 
-__git mux project ~/projects/my-app__
-:   Directly create and/or switch to a __project__ (useful for aliases/keybindings).
+**git mux project ~/projects/my-app**
+:   Directly create and/or switch to a **project** (useful for aliases/keybindings).
 
-__git mux t__
-:   Select a __git-branch__(1), then create and/or switch to its
-    __git-worktree__(1) and __tmux__(1) window.
+**git mux t**
+:   Select a **git-branch**(1), then create and/or switch to its
+    **git-worktree**(1) and **tmux**(1) window.
 
-__git mux task feature/123__
-:   If "feature/123" is a valid _path_, it will be used for the __task__.
-    Otherwise assume it is a _branch-name_, creating the __git-branch__(1) if it doesn't exist.
-    If the __project__ is a bare repo, create and/or switch to its __git-worktree__(1).
+**git mux task feature/123**
+:   If "feature/123" is a valid *path*, it will be used for the **task**.
+    Otherwise assume it is a *branch-name*, creating the **git-branch**(1) if it doesn't exist.
+    If the **project** is a bare repo, create and/or switch to its **git-worktree**(1).
     Otherwise checkout the branch.
   
-    By default, all of the above cases create and/or switch to a __tmux__(1) window
-    named "123", via __basename__(1). The __tmux__(1) _window-name_ can be specified
+    By default, all of the above cases create and/or switch to a **tmux**(1) window
+    named "123", via **basename**(1). The **tmux**(1) *window-name* can be specified
     with an additional argument.
 
-__git mux task ~/projects/my-app npm_stuff npm i && npm run build__
-:   Run commands in a __tmux__(1) window named "npm_stuff" without switching to it.
-    Specifying a _window-name_ is required when sending commands.
+**git mux task ~/projects/my-app npm_stuff npm i && npm run build**
+:   Run commands in a **tmux**(1) window named "npm_stuff" without switching to it.
+    Specifying a *window-name* is required when sending commands.
 
 # ENVIRONMENT VARIABLES
 
-__git-mux__ can be configured with the following environment variables:
+**git-mux** can be configured with the following environment variables:
 
-__GIT_MUX_PROJECTS__
-:   Space-separated list of projects for selection. The __project__ paths
+**GIT_MUX_PROJECTS**
+:   Space-separated list of projects for selection. The **project** paths
     must be absolute, and can start with "~".
 
-__GIT_MUX_PROJECT_PARENTS__
+**GIT_MUX_PROJECT_PARENTS**
 :   Space-separated list of directories that contain projects.
-    Defaults to __\$PROJECTS__ if set, otherwise __\$HOME__.
-    Uses __find__(1) to get child directories (depth of 1),
-    which are then used for __\$GIT_MUX_PROJECTS__.
+    Defaults to **\$PROJECTS** if set, otherwise **\$HOME**.
+    Uses **find**(1) to get child directories (depth of 1),
+    which are then used for **$GIT_MUX_PROJECTS**.
 
-    This option is ignored if __\$GIT_MUX_PROJECTS__ is already set.
+    This option is ignored if **$GIT_MUX_PROJECTS** is already set.
 
-__GIT_MUX_SELECT_CMD__
-:   Command used to select a __project__. Defaults to using __fzf__(1).
+**GIT_MUX_SELECT_CMD**
+:   Command used to select a **project**. Defaults to using **fzf**(1).
     This can be changed to any command, as long as it receives the directory
-    list from __stdin__(3) and sends a single, selected directory to __stdout__(3).
+    list from **stdin**(3) and sends a single, selected directory to **stdout**(3).
 
-__GIT_MUX_BRANCH_PREFIX__
-:   A _prefix_ string to prepend to new branches created via __task__.
+**GIT_MUX_BRANCH_PREFIX**
+:   A *prefix* string to prepend to new branches created via **task**.
     Unset by default.
 
-    When set, the resulting __git-branch__(1) name is
-    "_prefix_/_branch-name_". This option is ignored if
-    the provided _branch-name_ already contains a "/".
+    When set, the resulting **git-branch**(1) name is
+    "*prefix*/*branch-name*". This option is ignored if
+    the provided *branch-name* already contains a "/".
 
-    Some common examples are __"feature"__ and __"\$(id -un)"__.
+    Some common examples are **"feature"** and **"$(id -un)"**.
 
-__GIT_MUX_NEW_WORKTREE_CMD__
-:   Specify a set of commands to execute in the __tmux__(1) window when a new
-    __git-worktree__(1) is created via the __task__ command. Unset by default.
+**GIT_MUX_NEW_WORKTREE_CMD**
+:   Specify a set of commands to execute in the **tmux**(1) window when a new
+    **git-worktree**(1) is created via the **task** command. Unset by default.
   
-    For example: __"\[ -f './package.json' \] && npm i"__
+    For example: **"[ -f './package.json' ] && npm i"**
 
-__GIT_MUX_LOGS__
+**GIT_MUX_LOGS**
 :   Path to a log file. Logs are disabled if set to "0" or unset, which
     is the default.
 
     If set to "1", a default path is determined by first checking
-    if __\$XDG_STATE_HOME__ is set, then if __\$HOME/.local/state__ is a directory,
-    and finally falling back to __\$HOME__. The log file will be create as
-    _git-mux/logs_ in the determined directory.
+    if **\$XDG_STATE_HOME** is set, then if **\$HOME/.local/state** is a directory,
+    and finally falling back to **\$HOME**. The log file will be create as
+    *git-mux/logs* in the determined directory.
 
 # COMPATIBILITY
 
-__git-mux__ is POSIX compliant (according to ShellCheck), meaning it should
-work on your system. See the _BUGS_ section below if you experience compatibility problems.
+**git-mux** is POSIX compliant (according to ShellCheck), meaning it should
+work on your system. See the *BUGS* section below if you experience compatibility problems.
 
 The following dependencies are required:
-__tmux__(1), __git__(1), __grep__(1)
+**tmux**(1), **git**(1), **grep**(1)
 
 These dependencies are optional:
-__fzf__(1), __find__(1)
+**fzf**(1), **find**(1)
 
-See the _ENVIRONMENT_ section for alternatives to the optional dependencies.
+See the *ENVIRONMENT* section for alternatives to the optional dependencies.
 
 # BUGS
 
-If you experience any problems with __git-mux__ or have ideas for a new feature, please submit an issue on GitHub:
+If you experience any problems with **git-mux** or have ideas for a new feature, please submit an issue on GitHub:
 https://github.com/benelan/git-mux/issues
 
 # SEE ALSO
 
-__git-repository-layout__(7), __git-worktree__(1), __tmux__(1), __fzf__(1)
+**git-repository-layout**(7), **git-worktree**(1), **tmux**(1), **fzf**(1)
 

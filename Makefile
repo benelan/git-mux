@@ -8,7 +8,7 @@ all: man
 
 man: $(PROGRAM).1.md
 	@mkdir -p $(MANDIR)
-	@pandoc --standalone --to man $< --output $(MANDIR)/$(PROGRAM).1
+	@pandoc --standalone --from markdown-smart --to man $< --output $(MANDIR)/$(PROGRAM).1
 
 install:
 	@mkdir -p $(DESTDIR)$(PREFIX)/bin
