@@ -46,11 +46,80 @@ fi
 # --------------------------------------------------------------------- }}}
 # Usage info and logs                                                   {{{
 # --------------------------------------------------------------------- {|}
-help() {
-    if [ -z "$1" ]; then
-        man git-mux
-        exit 1
+
+usage_info="Usage:
+  git mux clone <repository>
+  git mux project [<path>]
+  git mux task [<branch-name>] [<window-name>]
+  git mux task <path> [<window-name>] [<remote-command>...]"
+
+short_help() {
+    if [ -n "$1" ]; then
+        logger "ERROR" "$*"
+        printf "Error: %s\n" "$*"
     fi
+    printf "\n%s\n\n%s\n" \
+        "$usage_info" \
+        "Try -h for a short message or --help for more detail." >&2
+    exit 1
+}
+
+long_help() {
+    printf "
+A git + tmux lovechild for blazingly fast movement between projects and tasks.
+Source: https://github.com/benelan/git-mux
+
+%s
+
+Commands:
+  c,  clone       Clone and configure a bare git repo for use with worktrees.
+  p,  project     Create or switch to a project (tmux session).
+                  Projects are usually, but not required to be, a git repo.
+  t,  task        Create, switch, or send text to a task (tmux window).
+                  Tasks are usually, but not required to be, a git worktree.
+  h,  help        Show a short or long help message, respectively.
+
+Configuration:
+  See the ENVIRONMENT section of \`man git mux\` for details.
+
+Examples:
+  # Select a project then create and/or switch to its tmux session.
+  git mux p
+
+  # Create and/or switch to a project directly (e.g., for a keybinding/alias).
+  git mux project ~/projects/my-app
+
+  # Select a branch then create and/or switch to its worktree and tmux window.
+  git mux t
+
+  # If 'feature/123' is a valid directory, it will be used for the task.
+  # Otherwise assume it is a git branch name, creating it if it doesn't exist.
+  # If the project is a bare repo, create and/or switch to its git worktree.
+  # Otherwise checkout the branch.
+  git mux task feature/123
+
+  # Run commands in a tmux window named npm_stuff without switching to it
+  git mux task ~/projects/my-app npm_stuff npm i && npm run build
+" "$usage_info"
+    exit 1
+}
+
+# @internal
+log_config_values() {
+    printf "\n%s\n%s\n \n%s\n%s\n \n%s\n%s\n \n%s\n%s\n \n%s\n%s\n \n%s\n%s\n" \
+        "========= GIT_MUX_PROJECT_PARENTS =========" \
+        "$GIT_MUX_PROJECT_PARENTS" \
+        "========= GIT_MUX_PROJECTS =========" \
+        "$GIT_MUX_PROJECTS" \
+        "========= GIT_MUX_SELECT_CMD =========" \
+        "$GIT_MUX_SELECT_CMD" \
+        "========= GIT_MUX_BRANCH_PREFIX =========" \
+        "$GIT_MUX_BRANCH_PREFIX" \
+        "========= GIT_MUX_NEW_WORKTREE_CMD =========" \
+        "$GIT_MUX_NEW_WORKTREE_CMD" \
+        "========= GIT_MUX_LOGS =========" \
+        "$GIT_MUX_LOGS"
+    exit 0
 }
 
 logger() {
@@ -63,33 +132,11 @@ logger() {
     fi
 }
 
-log_config_values() {
-    cat <<EOF
-========= GIT_MUX_PROJECT_PARENTS =========
-$GIT_MUX_PROJECT_PARENTS
-
-========= GIT_MUX_PROJECTS =========
-$GIT_MUX_PROJECTS
-
-========= GIT_MUX_SELECT_CMD =========
-$GIT_MUX_SELECT_CMD
-
-========= GIT_MUX_BRANCH_PREFIX =========
-$GIT_MUX_BRANCH_PREFIX
-
-========= GIT_MUX_NEW_WORKTREE_CMD =========
-$GIT_MUX_NEW_WORKTREE_CMD
-
-========= GIT_MUX_LOGS =========
-$GIT_MUX_LOGS
-
-EOF
-    exit 0
-}
-
 # --------------------------------------------------------------------- }}}
 # Util functions                                                        {{{
 # --------------------------------------------------------------------- {|}
+
+arg_is_flag() { case $1 in -*) true ;; *) false ;; esac }
 
 sanitize_name() {
     basename "$1" | tr "./" "__"
@@ -135,14 +182,18 @@ has_tmux_server && GIT_MUX_TMUX_SESSION="$(tmux display-message -p "#S")"
 # initial worktree for the repo's default branch.
 # https://git-scm.com/docs/git-worktree
 bare_clone() {
+    if arg_is_flag "$1" || arg_is_flag "$2"; then
+        short_help "invalid argument(s) for clone command: \"$*\""
+    fi
+
     new_repo_dir="${2:-"$(basename "$1" .git)"}"
     mkdir -p "$new_repo_dir"
     cd "$new_repo_dir" || return
 
     logger "INFO " "clone > cloning bare repo for \"$1\" in \"$(pwd)\""
-    git clone --bare "$1" .git
-    git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
-    git fetch origin
+    git clone --bare "$1" .git >&2
+    git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*" >&2
+    git fetch origin >&2
 
     # 60% of the time, it works every time (requires an "origin" or "upstream" remote)
     default_branch="$(
@@ -152,7 +203,7 @@ bare_clone() {
     )"
 
     logger "INFO " "clone > creating worktree for default branch: $default_branch"
-    git worktree add "$default_branch" "$default_branch"
+    git worktree add "$default_branch" "$default_branch" >&2
     cd "$default_branch" || return
     unset new_repo_dir default_branch
 }
@@ -161,14 +212,17 @@ bare_clone() {
 # Project command                                                       {{{
 # --------------------------------------------------------------------- {|}
 
-# See `git mux help config`
+# See `man git mux` for details on the following environment variables.
 # shellcheck disable=2086
 select_project() { printf "%s\n" $GIT_MUX_PROJECTS | $GIT_MUX_SELECT_CMD; }
 
-# Creates or attaches to a tmux session for a project. If the following argument
-# is a valid path, it is used for the project. Otherwise the user is prompted
-# to select a project.
+# If the arg1 is a valid path, it is used for the project.
+# Otherwise select a project from the directories added to the config.
 handle_project() {
+    if arg_is_flag "$1"; then
+        short_help "invalid argument for project command: \"$*\""
+    fi
+
     if [ -n "$1" ] && [ -d "$1" ]; then
         logger "INFO " "project > valid path provided: \"$1\""
         tmux_create_if_needed_and_attach "$1"
@@ -230,8 +284,13 @@ find_project_directory() {
 # Uses $GIT_MUX_SELECT_CMD to select an existing branch.
 # $ git mux t
 handle_task() {
+    if arg_is_flag "$1" || arg_is_flag "$2"; then
+        short_help "invalid argument(s) for task command: \"$*\""
+    fi
     logger "DEBUG" "task > args: $*"
-    # Check if the provided argument is a valid path
+
+    # Use arg1 for the task if it is a valid directory.
+    # Otherwise assume it is a git branch name.
     if [ -n "$1" ] && [ -d "$1" ]; then
         task_dir="$(cd "$1" && pwd)"
         task_name="${2:-"$(sanitize_name "$task_dir")"}"
@@ -270,7 +329,7 @@ handle_task() {
     unset task_name task_dir
 }
 
-# The logic that handles the git portion of the 'task' subcommand.
+# The logic that handles the git portion of the 'task' command.
 # See handle_task documentation above for more info.
 git_task() {
     task_start_dir="$(find_project_directory)"
@@ -305,8 +364,8 @@ git_task() {
         if [ "$(git rev-parse --is-bare-repository 2>>"$GIT_MUX_LOGS")" = "true" ]; then
             logger "DEBUG" "task > project is bare repo, using git-worktree"
             task_start_dir="$task_start_dir/$task_name"
-
             logger "INFO " "task > worktree directory: $task_start_dir"
+
             if [ ! -d "$task_start_dir" ]; then
                 logger "INFO " "task > worktree does not exist, adding now"
                 # shellcheck disable=2086
@@ -353,25 +412,17 @@ select_branch() {
 main() {
     command="$1"
     if [ -z "$command" ]; then
-        logger "INFO " "No command provided, logging usage message and exiting"
-        man git-mux
-        exit 1
+        short_help "a command is required"
     fi
     shift
     case $command in
-        config) log_config_values ;;
+        config) log_config_values ;; # @internal
+        help | --help) man git-mux ;;
+        h | -h) long_help ;;
         c | clone) bare_clone "$@" ;;
         p | project) handle_project "$@" ;;
         t | task) handle_task "$@" ;;
-        h | help | -h | --help) man git-mux ;;
-        *)
-            logger "ERROR" "invalid command: \"$command\""
-            printf "%s \"%s\"\n%s\n" \
-                "Error: Invalid command" \
-                "$command" \
-                "See \`git mux help\` for usage information." >&2
-            exit 1
-            ;;
+        *) short_help "invalid command: \"$command\"" ;;
     esac
 }
 
