@@ -154,23 +154,39 @@ directory.
 .RE
 .SH COMPATIBILITY
 .PP
-\f[B]git-mux\f[R] is POSIX compliant (according to ShellCheck), meaning
-it should work on your system.
-See the \f[I]BUGS\f[R] section below if you experience compatibility
-problems.
+The following non-standard utilities/tools are used by
+\f[B]git-mux\f[R]:
+.IP \[bu] 2
+\f[B]tmux\f[R](1) - Required.
+.PD 0
+.P
+.PD
+.IP \[bu] 2
+\f[B]git\f[R](1) - Required by the task command if the following
+argument is not a valid path.
+.PD 0
+.P
+.PD
+.IP \[bu] 2
+\f[B]fzf\f[R](1) - Required by default, but can be changed using
+\f[B]$GIT_MUX_SELECT_CMD\f[R] configuration option.
+See the \f[I]ENVIRONMENT\f[R] section.
 .PP
-The following dependencies are required: \f[B]tmux\f[R](1),
-\f[B]git\f[R](1), \f[B]grep\f[R](1)
+\f[B]git-mux\f[R] should be POSIX compliant (other than the non-standard
+utilities listed above), meaning it will likely work on your system.
+Unless you\[aq]re using Windows without WSL, in which case I don\[aq]t
+know how you ended up reading this sentence in the first place.
 .PP
-These dependencies are optional: \f[B]fzf\f[R](1), \f[B]find\f[R](1)
-.PP
-See the \f[I]ENVIRONMENT\f[R] section for alternatives to the optional
-dependencies.
+Please log an issue if you are on a Unix machine and experience any
+compatability issues.
 .SH BUGS
 .PP
 If you experience any problems with \f[B]git-mux\f[R] or have ideas for
 a new feature, please submit an issue on GitHub:
-https://github.com/benelan/git-mux/issues
+.PD 0
+.P
+.PD
+\f[B]https://github.com/benelan/git-mux/issues\f[R]
 .SH SEE ALSO
 .PP
 \f[B]git-repository-layout\f[R](7), \f[B]git-worktree\f[R](1),

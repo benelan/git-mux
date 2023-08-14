@@ -110,21 +110,20 @@
 
 # COMPATIBILITY
 
-**git-mux** is POSIX compliant (according to ShellCheck), meaning it should
-work on your system. See the *BUGS* section below if you experience compatibility problems.
+The following non-standard utilities/tools are used by **git-mux**:
 
-The following dependencies are required:
-**tmux**(1), **git**(1), **grep**(1)
+- **tmux**(1) - Required.  
+- **git**(1)  - Required by the task command if the following argument is not a valid path.  
+- **fzf**(1)  - Required by default, but can be changed using **\$GIT_MUX_SELECT_CMD** configuration option. See the *ENVIRONMENT* section.
 
-These dependencies are optional:
-**fzf**(1), **find**(1)
+**git-mux** should be POSIX compliant (other than the non-standard utilities listed above), meaning it will likely work on your system. Unless you're using Windows without WSL, in which case I don't know how you ended up reading this sentence in the first place.
 
-See the *ENVIRONMENT* section for alternatives to the optional dependencies.
+Please log an issue if you are on a Unix machine and experience any compatability issues.
 
 # BUGS
 
-If you experience any problems with **git-mux** or have ideas for a new feature, please submit an issue on GitHub:
-https://github.com/benelan/git-mux/issues
+If you experience any problems with **git-mux** or have ideas for a new feature, please submit an issue on GitHub:  
+**https://github.com/benelan/git-mux/issues**
 
 # SEE ALSO
 

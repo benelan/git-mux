@@ -8,7 +8,7 @@ if [ -z "$GIT_MUX_SELECT_CMD" ] && ! command -v fzf >/dev/null 2>&1; then
     printf "%s\n%s\n%s\n" \
         "Error: install fzf or specify a different method for" \
         "selection with the GIT_MUX_SELECT_CMD environment variable." \
-        "See \`git mux help config\` for details."
+        "See the ENVIRONMENT section of \`man git mux\` for details." >&2
     exit 1
 fi
 
@@ -19,17 +19,24 @@ GIT_MUX_SELECT_CMD=${GIT_MUX_SELECT_CMD:-fzf --reverse}
 GIT_MUX_PROJECT_PARENTS=${GIT_MUX_PROJECT_PARENTS:-${PROJECTS:-$HOME}}
 
 GIT_MUX_PROJECTS=${GIT_MUX_PROJECTS:-$(
-    # shellcheck disable=2086
-    find $GIT_MUX_PROJECT_PARENTS -maxdepth 1 -mindepth 1 -type d
+    for project_parent_dir in $GIT_MUX_PROJECT_PARENTS; do
+        for project_dir in "$project_parent_dir"/*; do
+            if [ -d "$project_dir" ]; then
+                printf "%s " "$project_dir"
+            fi
+        done
+    done
+    # The mess above is a compliant solution to:
+    # find $GIT_MUX_PROJECT_PARENTS -maxdepth 1 -mindepth 1 -type d
 )}
 
 if [ "$GIT_MUX_LOGS" = "1" ]; then
-    if [ -d "$XDG_STATE_HOME" ]; then
+    if [ -d "$HOME/.git-mux" ]; then
+        GIT_MUX_LOGS="$HOME/.git-mux/logs"
+    elif [ -d "$XDG_STATE_HOME" ]; then
         GIT_MUX_LOGS="$XDG_STATE_HOME/git-mux/logs"
-    elif [ -d "$HOME/.local/state" ]; then
-        GIT_MUX_LOGS="$HOME/.local/state/git-mux/logs"
     else
-        GIT_MUX_LOGS="${HOME:-~}/.git-mux/logs"
+        GIT_MUX_LOGS="$HOME/.local/state/git-mux/logs"
     fi
 fi
 
@@ -42,19 +49,8 @@ fi
 help() {
     if [ -z "$1" ]; then
         man git-mux
-        exit 0
+        exit 1
     fi
-    case $1 in
-        config | clone | project | task) man "git-mux-$1" ;;
-        *)
-            logger "ERROR" "no man page found for \"git-mux-$1$command\""
-            printf "%s \"%s\"\n%s\n" \
-                "Error: no man page found for" \
-                "git-mux-$1" \
-                "See \`git mux help\` for usage information."
-            exit 1
-            ;;
-    esac
 }
 
 logger() {
@@ -109,7 +105,7 @@ in_tmux() {
 }
 
 has_tmux_server() {
-    [ -n "$(pgrep tmux)" ]
+    tmux run 2>/dev/null
 }
 
 tmux_create_if_needed_and_attach() {
@@ -210,7 +206,6 @@ find_project_directory() {
         pwd
     fi
 }
-
 
 # Attaches/switches to a tmux window. If the next argument is a valid path,
 # the window is created in that directory. If there are arguments after the
@@ -315,13 +310,13 @@ git_task() {
             if [ ! -d "$task_start_dir" ]; then
                 logger "INFO " "task > worktree does not exist, adding now"
                 # shellcheck disable=2086
-                git worktree add $task_name $task_branch_flags $task_branch
+                git worktree add $task_name $task_branch_flags $task_branch >&2
                 export GIT_MUX_NEW_WORKTREE="1"
             fi
         else
             logger "INFO " "task > checking out branch"
             # shellcheck disable=2086
-            git checkout $task_branch_flags $task_branch
+            git checkout $task_branch_flags $task_branch >&2
         fi
 
         handle_task "$task_start_dir" \
@@ -359,7 +354,7 @@ main() {
     command="$1"
     if [ -z "$command" ]; then
         logger "INFO " "No command provided, logging usage message and exiting"
-        help
+        man git-mux
         exit 1
     fi
     shift
@@ -368,13 +363,13 @@ main() {
         c | clone) bare_clone "$@" ;;
         p | project) handle_project "$@" ;;
         t | task) handle_task "$@" ;;
-        h | help | -h | --help) help "$@" ;;
+        h | help | -h | --help) man git-mux ;;
         *)
             logger "ERROR" "invalid command: \"$command\""
             printf "%s \"%s\"\n%s\n" \
                 "Error: Invalid command" \
                 "$command" \
-                "See \`git mux help\` for usage information."
+                "See \`git mux help\` for usage information." >&2
             exit 1
             ;;
     esac
