@@ -91,22 +91,68 @@ Specifying a \f[I]window-name\f[R] is required when sending commands.
 .SH ENVIRONMENT VARIABLES
 .PP
 \f[B]git-mux\f[R] can be configured with the following environment
-variables:
+variables.
+Note that either \f[B]$GIT_MUX_PROJECTS\f[R] or
+\f[B]$GIT_MUX_PROJECT_PARENTS\f[R] must be set, and setting both will
+combine the values.
 .TP
 \f[B]GIT_MUX_PROJECTS\f[R]
-Space-separated list of projects for selection.
+Space-separated list of individual \f[B]project\f[R] directories for
+selection.
 The \f[B]project\f[R] paths must be absolute, and can start with
 \[dq]\[ti]\[dq].
+.RS
+.PP
+For example: \f[B]\[aq]\[ti]/notes \[ti]/.config/nvim\[aq]\f[R]
+.RE
 .TP
 \f[B]GIT_MUX_PROJECT_PARENTS\f[R]
 Space-separated list of directories that contain projects.
-Defaults to \f[B]$PROJECTS\f[R] if set, otherwise \f[B]$HOME\f[R].
-Uses \f[B]find\f[R](1) to get child directories (depth of 1), which are
-then used for \f[B]$GIT_MUX_PROJECTS\f[R].
+Defaults to \f[B]$PROJECTS\f[R] if set.
+The direct child directories (depth=1) of each parent are used for
+selection.
 .RS
 .PP
-This option is ignored if \f[B]$GIT_MUX_PROJECTS\f[R] is already set.
+For example: \f[B]\[aq]\[ti]/dev/work \[ti]/dev/personal\[aq]\f[R]
 .RE
+.PP
+In the two examples above, the full list of projects for selection would
+be:
+.IP
+.nf
+\f[C]
+\[ti]/notes  
+\[ti]/.config/nvim  
+\[ti]/work/acme-cli  
+\[ti]/work/acme-site  
+\[ti]/personal/my-brilliant-app-ideas  
+\[ti]/personal/my-failed-startup  
+\f[R]
+.fi
+.PP
+Assuming a file structure like this:
+.IP
+.nf
+\f[C]
+\[ti]/
+\[u251C]\[u2500] .config/
+\[br]  \[u251C]\[u2500] nvim/
+\[br]  \[br]  \[u251C]\[u2500] lua/
+\[br]  \[br]  \[u251C]\[u2500] init.lua
+\[u251C]\[u2500] notes/
+\[br]  \[u251C]\[u2500] how_to_quit_neovim.md
+\[u251C]\[u2500] personal/
+\[br]  \[u251C]\[u2500] my-brilliant-app-ideas/
+\[br]  \[u251C]\[u2500] my-failed-startup/
+\[br]  \[br]  \[u251C]\[u2500] whats_a11y.lawsuit.html
+\[u251C]\[u2500] work/
+\[br]  \[u251C]\[u2500] acme-cli/
+\[br]  \[br]  \[u251C]\[u2500] just_download_more_ram.js
+\[br]  \[u251C]\[u2500] acme-site/
+\[br]  \[br]  \[u251C]\[u2500] src/
+\[br]  \[br]  \[br]  \[u251C]\[u2500] spaghetti.jsx
+\f[R]
+.fi
 .TP
 \f[B]GIT_MUX_SELECT_CMD\f[R]
 Command used to select a \f[B]project\f[R].
@@ -114,6 +160,30 @@ Defaults to using \f[B]fzf\f[R](1).
 This can be changed to any command, as long as it receives the directory
 list from \f[B]stdin\f[R](3) and sends a single, selected directory to
 \f[B]stdout\f[R](3).
+.RS
+.PP
+For example, create a script on your \f[B]$PATH\f[R] (e.g.,
+\f[I]\[ti]/.local/bin/selectproj\f[R]):
+.IP
+.nf
+\f[C]
+#!/usr/bin/env sh
+stdin=$(cat)
+# shellcheck disable=2086,2069
+dialog --no-items --erase-on-exit --menu \[rs]
+    \[dq]Select a project\[dq] 0 0 0 $stdin 2>&1 >/dev/tty
+\f[R]
+.fi
+.PP
+Then add the following to your shell\[aq]s startup files (e.g.,
+\f[I]\[ti]/.bashrc\f[R]):
+.IP
+.nf
+\f[C]
+export GIT_MUX_SELECT_CMD=\[dq]selectproj\[dq]
+\f[R]
+.fi
+.RE
 .TP
 \f[B]GIT_MUX_BRANCH_PREFIX\f[R]
 A \f[I]prefix\f[R] string to prepend to new branches created via
@@ -126,8 +196,8 @@ When set, the resulting \f[B]git-branch\f[R](1) name is
 This option is ignored if the provided \f[I]branch-name\f[R] already
 contains a \[dq]/\[dq].
 .PP
-Some common examples are \f[B]\[dq]feature\[dq]\f[R] and \f[B]\[dq]$(id
--un)\[dq]\f[R].
+For example: \f[B]\[dq]feature\[dq]\f[R] or \f[B]\[dq]$(id
+-un)\[dq]\f[R]
 .RE
 .TP
 \f[B]GIT_MUX_NEW_WORKTREE_CMD\f[R]
@@ -137,8 +207,8 @@ command.
 Unset by default.
 .RS
 .PP
-For example: \f[B]\[dq][ -f \[aq]./package.json\[aq] ] && npm
-i\[dq]\f[R]
+For example: \f[B]\[aq][ -f \[aq]./package.json\[aq] ] && npm
+i\[aq]\f[R]
 .RE
 .TP
 \f[B]GIT_MUX_LOGS\f[R]
@@ -146,23 +216,21 @@ Path to a log file.
 Logs are disabled if set to \[dq]0\[dq] or unset, which is the default.
 .RS
 .PP
-If set to \[dq]1\[dq], a default path is determined by first checking if
-\f[B]$XDG_STATE_HOME\f[R] is set, then if \f[B]$HOME/.local/state\f[R]
-is a directory, and finally falling back to \f[B]$HOME\f[R].
-The log file will be create as \f[I]git-mux/logs\f[R] in the determined
-directory.
+If set to \[dq]1\[dq], the logs are saved to
+\f[B]$XDG_STATE_HOME/git-mux/logs\f[R], or
+\f[B]$HOME/.local/state/git-mux/logs\f[R] if \f[B]$XDG_STATE_HOME\f[R]
+is not set.
 .RE
 .SH COMPATIBILITY
 .PP
-The following non-standard utilities/tools are used by
-\f[B]git-mux\f[R]:
+The following external tools are used by \f[B]git-mux\f[R]:
 .IP \[bu] 2
 \f[B]tmux\f[R](1) - Required.
 .PD 0
 .P
 .PD
 .IP \[bu] 2
-\f[B]git\f[R](1) - Required by the task command if the following
+\f[B]git\f[R](1) - Required by the \f[B]task\f[R] command if the next
 argument is not a valid path.
 .PD 0
 .P

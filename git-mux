@@ -12,14 +12,20 @@ if [ -z "$GIT_MUX_SELECT_CMD" ] && ! command -v fzf >/dev/null 2>&1; then
     exit 1
 fi
 
+if [ -z "$GIT_MUX_PROJECTS" ] && [ -z "$GIT_MUX_PROJECT_PARENTS" ]; then
+    printf "%s\n%s\n%s\n" \
+        "Error: specifying your projects using the GIT_MUX_PROJECTS and/or" \
+        "GIT_MUX_PROJECT_PARENTS environemnt variables is required." \
+        "See the ENVIRONMENT section of \`man git mux\` for details." >&2
+    exit 1
+fi
+
 GIT_MUX_BRANCH_PREFIX=${GIT_MUX_BRANCH_PREFIX:-}
 
 GIT_MUX_SELECT_CMD=${GIT_MUX_SELECT_CMD:-fzf --reverse}
 
-GIT_MUX_PROJECT_PARENTS=${GIT_MUX_PROJECT_PARENTS:-${PROJECTS:-$HOME}}
-
-GIT_MUX_PROJECTS=${GIT_MUX_PROJECTS:-$(
-    for project_parent_dir in $GIT_MUX_PROJECT_PARENTS; do
+ALL_PROJECTS="${GIT_MUX_PROJECTS} $(
+    for project_parent_dir in ${GIT_MUX_PROJECT_PARENTS:-$PROJECTS}; do
         for project_dir in "$project_parent_dir"/*; do
             if [ -d "$project_dir" ]; then
                 printf "%s " "$project_dir"
@@ -28,7 +34,7 @@ GIT_MUX_PROJECTS=${GIT_MUX_PROJECTS:-$(
     done
     # The mess above is a compliant solution to:
     # find $GIT_MUX_PROJECT_PARENTS -maxdepth 1 -mindepth 1 -type d
-)}
+)"
 
 if [ "$GIT_MUX_LOGS" = "1" ]; then
     if [ -d "$HOME/.git-mux" ]; then
@@ -214,7 +220,7 @@ bare_clone() {
 
 # See `man git mux` for details on the following environment variables.
 # shellcheck disable=2086
-select_project() { printf "%s\n" $GIT_MUX_PROJECTS | $GIT_MUX_SELECT_CMD; }
+select_project() { printf "%s\n" $ALL_PROJECTS | $GIT_MUX_SELECT_CMD; }
 
 # If the arg1 is a valid path, it is used for the project.
 # Otherwise select a project from the directories added to the config.
@@ -240,7 +246,7 @@ handle_project() {
 find_project_directory() {
     logger "DEBUG" "task > checking project names for a match with the tmux session: \"$GIT_MUX_TMUX_SESSION\""
     # check if the tmux session name is one of the projects
-    for project in $GIT_MUX_PROJECTS; do
+    for project in $ALL_PROJECTS; do
         if [ "$(
             sanitize_name "$(basename "$project")"
         )" = "$GIT_MUX_TMUX_SESSION" ]; then

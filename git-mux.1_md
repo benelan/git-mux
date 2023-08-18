@@ -64,24 +64,69 @@
 
 # ENVIRONMENT VARIABLES
 
-**git-mux** can be configured with the following environment variables:
+**git-mux** can be configured with the following environment variables. Note
+that either **\$GIT_MUX_PROJECTS** or **\$GIT_MUX_PROJECT_PARENTS** must be set,
+and setting both will combine the values.
 
 **GIT_MUX_PROJECTS**
-:   Space-separated list of projects for selection. The **project** paths
-    must be absolute, and can start with "~".
+:   Space-separated list of individual **project** directories for selection.
+    The **project** paths must be absolute, and can start with "~". 
+
+    For example: **'~/notes ~/.config/nvim'**
 
 **GIT_MUX_PROJECT_PARENTS**
 :   Space-separated list of directories that contain projects.
-    Defaults to **\$PROJECTS** if set, otherwise **\$HOME**.
-    Uses **find**(1) to get child directories (depth of 1),
-    which are then used for **$GIT_MUX_PROJECTS**.
+    Defaults to **\$PROJECTS** if set. The direct child directories
+    (depth=1) of each parent are used for selection.
 
-    This option is ignored if **$GIT_MUX_PROJECTS** is already set.
+    For example: **'~/dev/work ~/dev/personal'**
+    
+In the two examples above, the full list of projects for selection would be:
+
+    ~/notes  
+    ~/.config/nvim  
+    ~/work/acme-cli  
+    ~/work/acme-site  
+    ~/personal/my-brilliant-app-ideas  
+    ~/personal/my-failed-startup  
+
+Assuming a file structure like this:
+
+    ~/
+    ├─ .config/
+    │  ├─ nvim/
+    │  │  ├─ lua/
+    │  │  ├─ init.lua
+    ├─ notes/
+    │  ├─ how_to_quit_neovim.md
+    ├─ personal/
+    │  ├─ my-brilliant-app-ideas/
+    │  ├─ my-failed-startup/
+    │  │  ├─ whats_a11y.lawsuit.html
+    ├─ work/
+    │  ├─ acme-cli/
+    │  │  ├─ just_download_more_ram.js
+    │  ├─ acme-site/
+    │  │  ├─ src/
+    │  │  │  ├─ spaghetti.jsx
+
 
 **GIT_MUX_SELECT_CMD**
 :   Command used to select a **project**. Defaults to using **fzf**(1).
     This can be changed to any command, as long as it receives the directory
     list from **stdin**(3) and sends a single, selected directory to **stdout**(3).
+
+    For example, create a script on your **$PATH** (e.g., *~/.local/bin/selectproj*):
+
+        #!/usr/bin/env sh
+        stdin=$(cat)
+        # shellcheck disable=2086,2069
+        dialog --no-items --erase-on-exit --menu \
+            "Select a project" 0 0 0 $stdin 2>&1 >/dev/tty
+
+    Then add the following to your shell's startup files (e.g., *~/.bashrc*):
+
+        export GIT_MUX_SELECT_CMD="selectproj"
 
 **GIT_MUX_BRANCH_PREFIX**
 :   A *prefix* string to prepend to new branches created via **task**.
@@ -91,29 +136,26 @@
     "*prefix*/*branch-name*". This option is ignored if
     the provided *branch-name* already contains a "/".
 
-    Some common examples are **"feature"** and **"$(id -un)"**.
+    For example: **"feature"** or **"$(id -un)"**
 
 **GIT_MUX_NEW_WORKTREE_CMD**
 :   Specify a set of commands to execute in the **tmux**(1) window when a new
     **git-worktree**(1) is created via the **task** command. Unset by default.
 
-    For example: **"[ -f './package.json' ] && npm i"**
+    For example: **'[ -f './package.json' ] && npm i'**
 
 **GIT_MUX_LOGS**
 :   Path to a log file. Logs are disabled if set to "0" or unset, which
     is the default.
 
-    If set to "1", a default path is determined by first checking
-    if **\$XDG_STATE_HOME** is set, then if **\$HOME/.local/state** is a directory,
-    and finally falling back to **\$HOME**. The log file will be create as
-    *git-mux/logs* in the determined directory.
+    If set to "1", the logs are saved to **\$XDG_STATE_HOME/git-mux/logs**, or **\$HOME/.local/state/git-mux/logs** if **\$XDG_STATE_HOME** is not set.
 
 # COMPATIBILITY
 
-The following non-standard utilities/tools are used by **git-mux**:
+The following external tools are used by **git-mux**:
 
 - **tmux**(1) - Required.  
-- **git**(1)  - Required by the task command if the following argument is not a valid path.  
+- **git**(1)  - Required by the **task** command if the next argument is not a valid path.  
 - **fzf**(1)  - Required by default, but can be changed using **\$GIT_MUX_SELECT_CMD** configuration option. See the *ENVIRONMENT* section.
 
 **git-mux** should be POSIX compliant (other than the non-standard utilities listed above), meaning it will likely work on your system. Unless you're using Windows without WSL, in which case I don't know how you ended up reading this sentence in the first place.
