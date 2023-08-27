@@ -20,11 +20,9 @@ if [ -z "$GIT_MUX_PROJECTS" ] && [ -z "$GIT_MUX_PROJECT_PARENTS" ]; then
     exit 1
 fi
 
-GIT_MUX_BRANCH_PREFIX=${GIT_MUX_BRANCH_PREFIX:-}
-
 GIT_MUX_SELECT_CMD=${GIT_MUX_SELECT_CMD:-fzf --reverse}
 
-ALL_PROJECTS="${GIT_MUX_PROJECTS} $(
+GIT_MUX_ALL_PROJECTS="${GIT_MUX_PROJECTS} $(
     for project_parent_dir in ${GIT_MUX_PROJECT_PARENTS:-$PROJECTS}; do
         for project_dir in "$project_parent_dir"/*; do
             if [ -d "$project_dir" ]; then
@@ -53,83 +51,131 @@ fi
 # Usage info and logs                                                   {{{
 # --------------------------------------------------------------------- {|}
 
-usage_info="Usage:
-  git mux clone <repository>
-  git mux project [<path>]
-  git mux task [<branch-name>] [<window-name>]
-  git mux task <path> [<window-name>] [<remote-command>...]"
+usage="Usage:
+  git mux clone REPOSITORY
+  git mux project [PATH]
+  git mux task [BRANCH] [WINDOW]
+  git mux task PATH [WINDOW] [COMMAND...]"
 
-short_help() {
+error() {
     if [ -n "$1" ]; then
-        logger "ERROR" "$*"
+        log "ERROR" "$*"
         printf "Error: %s\n" "$*"
     fi
     printf "\n%s\n\n%s\n" \
-        "$usage_info" \
-        "Try -h for a short message or --help for more detail." >&2
+        "$usage" \
+        "Try -h for a concise description or --help for more detail." >&2
     exit 1
 }
 
-long_help() {
+help() {
     printf "
 A git + tmux lovechild for blazingly fast movement between projects and tasks.
+
 Source: https://github.com/benelan/git-mux
 
 %s
 
 Commands:
   c,  clone       Clone and configure a bare git repo for use with worktrees.
-  p,  project     Create or switch to a project (tmux session).
-                  Projects are usually, but not required to be, a git repo.
+  p,  project     Create and/or switch to a project (tmux session).
+                  Projects are usually a git repo, but any directory is valid.
   t,  task        Create, switch, or send text to a task (tmux window).
-                  Tasks are usually, but not required to be, a git worktree.
-  h,  help        Show a short or long help message, respectively.
+                  Tasks are usually a git worktree or branch (not required).
+  h,  help        Show a concise help message or the man page, respectively.
 
 Configuration:
-  See the ENVIRONMENT section of \`man git mux\` for details.
+  See the ENVIRONMENT section of \`man git mux\` for all options. At least one
+  of the following environment variables is required to set the project paths.
+  The paths must be absolute or start with '~'.
+
+  GIT_MUX_PROJECTS
+    Space delimited list of individual project directories for fuzzy selection.
+
+  GIT_MUX_PROJECT_PARENTS
+    Space delimited list of directories that contain projects. The direct
+    child directories (depth=1) of each parent are used for fuzzy selection.
 
 Examples:
   # Select a project then create and/or switch to its tmux session.
   git mux p
 
-  # Create and/or switch to a project directly (e.g., for a keybinding/alias).
-  git mux project ~/projects/my-app
+  # Create and/or switch to a project directly (useful for a keymap/alias).
+  git mux project ~/dev/work/acme-app
 
-  # Select a branch then create and/or switch to its worktree and tmux window.
-  git mux t
-
-  # If 'feature/123' is a valid directory, it will be used for the task.
-  # Otherwise assume it is a git branch name, creating it if it doesn't exist.
-  # If the project is a bare repo, create and/or switch to its git worktree.
-  # Otherwise checkout the branch.
+  # Create and/or switch to a tmux window named '123' via basename(1).
+  # Start the window in 'feature/123' if it is a valid directory.
+  # Otherwise assume it is a git branch name. Create and/or switch to the
+  # git worktree if the project is a bare repo, otherwise checkout the branch.
   git mux task feature/123
 
-  # Run commands in a tmux window named npm_stuff without switching to it
-  git mux task ~/projects/my-app npm_stuff npm i && npm run build
-" "$usage_info"
-    exit 1
-}
+  # Select an existing branch for the task (using fzf by default).
+  git mux t
 
-# @internal
-log_config_values() {
-    printf "\n%s\n%s\n \n%s\n%s\n \n%s\n%s\n \n%s\n%s\n \n%s\n%s\n \n%s\n%s\n" \
-        "========= GIT_MUX_PROJECT_PARENTS =========" \
-        "$GIT_MUX_PROJECT_PARENTS" \
-        "========= GIT_MUX_PROJECTS =========" \
-        "$GIT_MUX_PROJECTS" \
-        "========= GIT_MUX_SELECT_CMD =========" \
-        "$GIT_MUX_SELECT_CMD" \
-        "========= GIT_MUX_BRANCH_PREFIX =========" \
-        "$GIT_MUX_BRANCH_PREFIX" \
-        "========= GIT_MUX_NEW_WORKTREE_CMD =========" \
-        "$GIT_MUX_NEW_WORKTREE_CMD" \
-        "========= GIT_MUX_LOGS =========" \
-        "$GIT_MUX_LOGS"
+  # Run commands in a tmux window named 'tests' without switching to it.
+  git mux task packages/cli tests npm i && npm test
+" "$usage" >&2
     exit 0
 }
 
-logger() {
+# @internal
+config_values() {
+    cat <<EOF
+========= @internal: all projects =========
+$GIT_MUX_ALL_PROJECTS
+
+========= @internal: tmux session name =========
+$GIT_MUX_TMUX_SESSION
+
+========= GIT_MUX_PROJECT_PARENTS =========
+$GIT_MUX_PROJECT_PARENTS
+
+========= GIT_MUX_PROJECTS =========
+$GIT_MUX_PROJECTS
+
+========= GIT_MUX_SELECT_CMD =========
+$GIT_MUX_SELECT_CMD
+
+========= GIT_MUX_BRANCH_PREFIX =========
+$GIT_MUX_BRANCH_PREFIX
+
+========= GIT_MUX_BRANCH_DEFAULT_QUERY =========
+$GIT_MUX_BRANCH_DEFAULT_QUERY
+
+========= GIT_MUX_NEW_WORKTREE_CMD =========
+$GIT_MUX_NEW_WORKTREE_CMD
+
+========= GIT_MUX_LOGS =========
+$GIT_MUX_LOGS
+
+========= GIT_MUX_LOG_LEVEL =========
+$GIT_MUX_LOG_LEVEL
+EOF
+}
+
+has_log_level() {
+    case "$GIT_MUX_LOG_LEVEL" in
+        DEBUG) test "$1" -gt 1 && return 1 ;;
+        INFO*) test "$1" -gt 2 && return 1 ;;
+        WARN*) test "$1" -gt 3 && return 1 ;;
+        ERROR) test "$1" -gt 4 && return 1 ;;
+        *) error "invalid GIT_MUX_LOG_LEVEL value: $GIT_MUX_LOG_LEVEL" ;;
+    esac
+    return 0
+}
+
+log() {
     if [ -n "$GIT_MUX_LOGS" ] && [ "$GIT_MUX_LOGS" != "0" ]; then
+        if [ -n "$GIT_MUX_LOG_LEVEL" ]; then
+            case "$1" in
+                DEBUG) has_log_level 1 || return ;;
+                INFO*) has_log_level 2 || return ;;
+                WARN*) has_log_level 3 || return ;;
+                ERROR) has_log_level 4 || return ;;
+                *) error "invalid log level: $1" ;;
+            esac
+        fi
+
         printf "%s | %s | %s" \
             "$1" \
             "$(date +%Y-%m-%dT%H:%M:%S 2>/dev/null)" \
@@ -166,13 +212,14 @@ tmux_create_if_needed_and_attach() {
     project_name="$(sanitize_name "$project_path")"
     if in_tmux; then
         if ! tmux_session_exists "$project_name"; then
-            logger "INFO " "project > creating \"$project_name\" at path \"$project_path\""
+            log "INFO " \
+                "project > creating \"$project_name\" at path \"$project_path\""
             tmux new-session -Adc "$project_path" -s "$project_name"
         fi
-        logger "INFO " "project > switching to \"$project_name\" at path \"$project_path\""
+        log "INFO " "project > switching to \"$project_name\" at path \"$project_path\""
         tmux switch-client -t "$project_name"
     else
-        logger "INFO " "project > creating or attaching to \"$project_name\" at path \"$project_path\""
+        log "INFO " "project > creating or attaching to \"$project_name\" at path \"$project_path\""
         tmux new-session -As "$project_name" -c "$project_path"
     fi
     unset project_path project_name
@@ -189,26 +236,26 @@ has_tmux_server && GIT_MUX_TMUX_SESSION="$(tmux display-message -p "#S")"
 # https://git-scm.com/docs/git-worktree
 bare_clone() {
     if arg_is_flag "$1" || arg_is_flag "$2"; then
-        short_help "invalid argument(s) for clone command: \"$*\""
+        error "invalid argument(s) for clone command: \"$*\""
     fi
 
     new_repo_dir="${2:-"$(basename "$1" .git)"}"
     mkdir -p "$new_repo_dir"
     cd "$new_repo_dir" || return
 
-    logger "INFO " "clone > cloning bare repo for \"$1\" in \"$(pwd)\""
+    log "INFO " "clone > cloning bare repo for \"$1\" in \"$(pwd)\""
     git clone --bare "$1" .git >&2
     git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*" >&2
     git fetch origin >&2
 
-    # 60% of the time, it works every time (requires an "origin" or "upstream" remote)
+    # 60% of the time, it works every time (requires 'origin' or 'upstream' remote)
     default_branch="$(
         git remote show "$(
             git remote | grep -Eo "(upstream|origin)" | tail -1
         )" | grep "HEAD branch" | cut -d" " -f5
     )"
 
-    logger "INFO " "clone > creating worktree for default branch: $default_branch"
+    log "INFO " "clone > creating worktree for default branch: $default_branch"
     git worktree add "$default_branch" "$default_branch" >&2
     cd "$default_branch" || return
     unset new_repo_dir default_branch
@@ -220,20 +267,20 @@ bare_clone() {
 
 # See `man git mux` for details on the following environment variables.
 # shellcheck disable=2086
-select_project() { printf "%s\n" $ALL_PROJECTS | $GIT_MUX_SELECT_CMD; }
+select_project() { printf "%s\n" $GIT_MUX_ALL_PROJECTS | $GIT_MUX_SELECT_CMD; }
 
 # If the arg1 is a valid path, it is used for the project.
 # Otherwise select a project from the directories added to the config.
 handle_project() {
     if arg_is_flag "$1"; then
-        short_help "invalid argument for project command: \"$*\""
+        error "invalid argument for project command: \"$*\""
     fi
 
     if [ -n "$1" ] && [ -d "$1" ]; then
-        logger "INFO " "project > valid path provided: \"$1\""
+        log "INFO " "project > valid path provided: \"$1\""
         tmux_create_if_needed_and_attach "$1"
     else
-        logger "INFO " "project > a valid path was not provided, interactively selecting a project"
+        log "INFO " "project > a valid path was not provided, interactively selecting a project"
         tmux_create_if_needed_and_attach "$(select_project)"
     fi
 }
@@ -244,25 +291,25 @@ handle_project() {
 
 # Determines the absolute path of the selected or provided project.
 find_project_directory() {
-    logger "DEBUG" "task > checking project names for a match with the tmux session: \"$GIT_MUX_TMUX_SESSION\""
+    log "DEBUG" "task > checking project names for a match with the tmux session: \"$GIT_MUX_TMUX_SESSION\""
     # check if the tmux session name is one of the projects
-    for project in $ALL_PROJECTS; do
+    for project in $GIT_MUX_ALL_PROJECTS; do
         if [ "$(
             sanitize_name "$(basename "$project")"
         )" = "$GIT_MUX_TMUX_SESSION" ]; then
-            logger "DEBUG" "task > found a matching project: \"$project\""
+            log "DEBUG" "task > found a matching project: \"$project\""
             echo "$project"
             unset project
             return
         fi
     done
 
-    logger "WARN " "task > no matching project found"
+    log "WARN " "task > no matching project found"
     if [ "$(sanitize_name "$(basename ~)")" = "$GIT_MUX_TMUX_SESSION" ]; then
-        logger "DEBUG" "task > currently in home session, interactively selecting a project"
+        log "DEBUG" "task > currently in home session, interactively selecting a project"
         select_project && return
     else
-        logger "DEBUG" "task > using current directory as project"
+        log "DEBUG" "task > using current directory as project"
         pwd
     fi
 }
@@ -277,23 +324,11 @@ find_project_directory() {
 # If the initial argument isn't a valid path it is treated a a git branch and
 # creates/switches to a corresponding git worktree (when relevant). If no
 # argument is provided it prompts to select an existing branch.
-#
-# Examples:
-#
-# Install deps and start app in a new or preexisting tmux window named 'start'.
-# $ git mux task packages/app start npm install && npm start
-#
-# Create/checkout branch in tmux window, creating a git worktree if relevant.
-# Appends $GIT_MUX_BRANCH_PREFIX to the argument when creating a new branch.
-# $ git mux task 123-fix-bug
-#
-# Uses $GIT_MUX_SELECT_CMD to select an existing branch.
-# $ git mux t
 handle_task() {
     if arg_is_flag "$1" || arg_is_flag "$2"; then
-        short_help "invalid argument(s) for task command: \"$*\""
+        error "invalid argument(s) for task command: \"$*\""
     fi
-    logger "DEBUG" "task > args: $*"
+    log "DEBUG" "task > args: $*"
 
     # Use arg1 for the task if it is a valid directory.
     # Otherwise assume it is a git branch name.
@@ -305,7 +340,7 @@ handle_task() {
         return 0
     fi
 
-    logger "INFO " "task > creating new \"$task_name\" task in \"$task_dir\""
+    log "INFO " "task > creating new \"$task_name\" task in \"$task_dir\""
     # Not using new-window's -S flag for backwards compatibility
     if ! tmux list-windows | grep -q "$task_name"; then
         tmux new-window -dn "$task_name" -c "$task_dir"
@@ -313,7 +348,7 @@ handle_task() {
 
     # if provided, execute commands in the tmux window for new worktrees
     if [ -n "$GIT_MUX_NEW_WORKTREE" ] && [ -n "$GIT_MUX_NEW_WORKTREE_CMD" ]; then
-        logger "INFO " "task > executing GIT_MUX_NEW_WORKTREE_CMD: \"$GIT_MUX_NEW_WORKTREE_CMD\""
+        log "INFO " "task > executing GIT_MUX_NEW_WORKTREE_CMD: \"$GIT_MUX_NEW_WORKTREE_CMD\""
         tmux send-keys -t "$GIT_MUX_TMUX_SESSION:$task_name" \
             "$GIT_MUX_NEW_WORKTREE_CMD" Enter
         unset GIT_MUX_NEW_WORKTREE
@@ -322,13 +357,13 @@ handle_task() {
     # Attach, switch, or send keys to the new task
     if [ -n "$3" ]; then
         shift 2
-        logger "INFO " "task > executing command (not attaching/switching tmux windows): \"$*\""
+        log "INFO " "task > executing command (not attaching/switching tmux windows): \"$*\""
         tmux send-keys -t "$GIT_MUX_TMUX_SESSION:$task_name" "$*" Enter
     elif [ -n "$TMUX" ]; then
-        logger "INFO " "task > switching tmux client"
+        log "INFO " "task > switching tmux client"
         tmux switch-client -t "$GIT_MUX_TMUX_SESSION:$task_name"
     else
-        logger "INFO " "task > attaching to tmux session"
+        log "INFO " "task > attaching to tmux session"
         tmux attach -t "$GIT_MUX_TMUX_SESSION:$task_name"
     fi
 
@@ -340,46 +375,46 @@ handle_task() {
 git_task() {
     task_start_dir="$(find_project_directory)"
 
-    logger "INFO " "task > project's directory: $task_start_dir"
+    log "INFO " "task > project's directory: $task_start_dir"
     cd "$task_start_dir" || return 1
 
     if is_git_root_dir "$task_start_dir"; then
         if [ -n "$1" ]; then
             task_branch="$1"
             shift
-            logger "INFO " "task > provided branch: $task_branch"
+            log "INFO " "task > provided branch: $task_branch"
 
             if ! git show-ref --verify --quiet "refs/heads/$task_branch"; then
                 task_branch_flags="-b"
 
-                logger "DEBUG" "task > branch not found and will be created"
+                log "DEBUG" "task > branch not found and will be created"
                 if [ "${task_branch#*"/"}" = "$task_branch" ]; then
                     task_branch="$GIT_MUX_BRANCH_PREFIX/$task_branch"
-                    logger "DEBUG" "task > added prefix to branch: $task_branch"
+                    log "DEBUG" "task > added prefix to branch: $task_branch"
                 fi
             fi
         else
             task_branch=$(select_branch)
-            logger "INFO " "task > selected branch: $task_branch"
+            log "INFO " "task > selected branch: $task_branch"
         fi
 
         task_name="$(sanitize_name "$task_branch")"
-        logger "DEBUG" "task > sanitized task name: $task_name"
+        log "DEBUG" "task > sanitized task name: $task_name"
 
         # naively assumes a bare repo will be using worktrees
         if [ "$(git rev-parse --is-bare-repository 2>>"$GIT_MUX_LOGS")" = "true" ]; then
-            logger "DEBUG" "task > project is bare repo, using git-worktree"
+            log "DEBUG" "task > project is bare repo, using git-worktree"
             task_start_dir="$task_start_dir/$task_name"
-            logger "INFO " "task > worktree directory: $task_start_dir"
+            log "INFO " "task > worktree directory: $task_start_dir"
 
             if [ ! -d "$task_start_dir" ]; then
-                logger "INFO " "task > worktree does not exist, adding now"
+                log "INFO " "task > worktree does not exist, adding now"
                 # shellcheck disable=2086
                 git worktree add $task_name $task_branch_flags $task_branch >&2
                 export GIT_MUX_NEW_WORKTREE="1"
             fi
         else
-            logger "INFO " "task > checking out branch"
+            log "INFO " "task > checking out branch"
             # shellcheck disable=2086
             git checkout $task_branch_flags $task_branch >&2
         fi
@@ -418,23 +453,23 @@ select_branch() {
 main() {
     command="$1"
     if [ -z "$command" ]; then
-        short_help "a command is required"
+        error "a command is required"
     fi
     shift
     case $command in
-        config) log_config_values ;; # @internal
+        config) config_values >&2 && exit 0 ;; # @internal
         help | --help) man git-mux ;;
-        h | -h) long_help ;;
+        h | -h) help ;;
         c | clone) bare_clone "$@" ;;
         p | project) handle_project "$@" ;;
         t | task) handle_task "$@" ;;
-        *) short_help "invalid command: \"$command\"" ;;
+        *) error "invalid command: \"$command\"" ;;
     esac
 }
 
 # --------------------------------------------------------------------- }}}
 
 # add blank line to separate runs in the logs
-logger "\nINFO " "START > args: $*"
+log "\nINFO " "START > args: $*"
 
 main "$@"
