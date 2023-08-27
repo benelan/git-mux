@@ -9,6 +9,10 @@ all: man
 man: $(PROGRAM).1.txt
 	@mkdir -p $(MANDIR)
 	@pandoc --standalone --from markdown-smart --to man $< --output $(MANDIR)/$(PROGRAM).1
+	@pandoc --standalone --from markdown-smart --to gfm $< --output MANUAL.md
+	@sed -i 's%\*\$$%*\\$$%g' MANUAL.md
+	@sed -i 's%\*ENVIRONMENT\*%[ENVIRONMENT](#environment)%g' MANUAL.md
+	@sed -i 's%^#%##%g' MANUAL.md
 
 install:
 	@mkdir -p $(DESTDIR)$(PREFIX)/bin
@@ -25,4 +29,4 @@ uninstall:
 	@rm -rf $(DESTDIR)$(PREFIX)/share/$(MANDIR)/$(PROGRAM).1
 	@rm -rf $(DESTDIR)$(DOCDIR)
 
-.PHONY: all man install uninstall
+.PHONY: all install uninstall
