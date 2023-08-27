@@ -150,10 +150,10 @@ EOF
 
 has_log_level() {
     case "$GIT_MUX_LOG_LEVEL" in
-        DEBUG) test "$1" -gt 1 && return 1 ;;
-        INFO) test "$1" -gt 2 && return 1 ;;
-        WARN) test "$1" -gt 3 && return 1 ;;
-        ERROR) test "$1" -gt 4 && return 1 ;;
+        DEBUG*) test "$1" -gt 0 && return 1 ;;
+        INFO*) test "$1" -gt 1 && return 1 ;;
+        WARN*) test "$1" -gt 2 && return 1 ;;
+        ERROR*) test "$1" -gt 3 && return 1 ;;
         *) error "invalid GIT_MUX_LOG_LEVEL value: $GIT_MUX_LOG_LEVEL" ;;
     esac
     return 0
@@ -161,17 +161,22 @@ has_log_level() {
 
 log() {
     if [ -n "$GIT_MUX_LOGS" ] && [ "$GIT_MUX_LOGS" != "0" ]; then
+        if [ -z "$1" ]; then
+            printf "\n" >>"$GIT_MUX_LOGS"
+            return 0
+        fi
+
         if [ -n "$GIT_MUX_LOG_LEVEL" ]; then
             case "$1" in
-                *DEBUG) has_log_level 1 || return 0 ;;
-                *INFO*) has_log_level 2 || return 0 ;;
-                *WARN*) has_log_level 3 || return 0 ;;
-                *ERROR) has_log_level 4 || return 0 ;;
+                DEBUG) has_log_level 1 && return 0 ;;
+                INFO*) has_log_level 2 && return 0 ;;
+                WARN*) has_log_level 4 && return 0 ;;
+                ERROR) has_log_level 4 && return 0 ;;
                 *) error "invalid log level: $1" ;;
             esac
         fi
 
-        printf "%s | %s | %s" \
+        printf "%s | %s | %s\n" \
             "$1" \
             "$(date +%Y-%m-%dT%H:%M:%S 2>/dev/null)" \
             "$2" \
@@ -464,7 +469,6 @@ main() {
 
 # --------------------------------------------------------------------- }}}
 
-# add blank line to separate runs in the logs
-log "\nINFO " "START > args: $*"
+log "INFO " "START > args: $*"
 
 main "$@"
