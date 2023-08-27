@@ -20,8 +20,10 @@ if [ -z "$GIT_MUX_PROJECTS" ] && [ -z "$GIT_MUX_PROJECT_PARENTS" ]; then
     exit 1
 fi
 
-GIT_MUX_SELECT_CMD=${GIT_MUX_SELECT_CMD:-fzf --reverse}
+GIT_MUX_SELECT_CMD=${GIT_MUX_SELECT_CMD:-fzf}
 
+# The following mess is a compliant solution to:
+# find $GIT_MUX_PROJECT_PARENTS -maxdepth 1 -mindepth 1 -type d
 GIT_MUX_ALL_PROJECTS="${GIT_MUX_PROJECTS} $(
     for project_parent_dir in ${GIT_MUX_PROJECT_PARENTS:-$PROJECTS}; do
         for project_dir in "$project_parent_dir"/*; do
@@ -30,22 +32,15 @@ GIT_MUX_ALL_PROJECTS="${GIT_MUX_PROJECTS} $(
             fi
         done
     done
-    # The mess above is a compliant solution to:
-    # find $GIT_MUX_PROJECT_PARENTS -maxdepth 1 -mindepth 1 -type d
 )"
 
 if [ "$GIT_MUX_LOGS" = "1" ]; then
-    if [ -d "$HOME/.git-mux" ]; then
-        GIT_MUX_LOGS="$HOME/.git-mux/logs"
-    elif [ -d "$XDG_STATE_HOME" ]; then
-        GIT_MUX_LOGS="$XDG_STATE_HOME/git-mux/logs"
-    else
-        GIT_MUX_LOGS="$HOME/.local/state/git-mux/logs"
-    fi
+    GIT_MUX_LOGS="${XDG_STATE_HOME:-$HOME/.local/state}/git-mux/logs"
 fi
 
-[ -n "$GIT_MUX_LOGS" ] && [ "$GIT_MUX_LOGS" != "0" ] &&
+if [ -n "$GIT_MUX_LOGS" ] && [ "$GIT_MUX_LOGS" != "0" ]; then
     mkdir -p "$(dirname "$GIT_MUX_LOGS")"
+fi
 
 # --------------------------------------------------------------------- }}}
 # Usage info and logs                                                   {{{
@@ -139,8 +134,8 @@ $GIT_MUX_SELECT_CMD
 ========= GIT_MUX_BRANCH_PREFIX =========
 $GIT_MUX_BRANCH_PREFIX
 
-========= GIT_MUX_BRANCH_DEFAULT_QUERY =========
-$GIT_MUX_BRANCH_DEFAULT_QUERY
+========= GIT_MUX_BRANCH_FILTER =========
+$GIT_MUX_BRANCH_FILTER
 
 ========= GIT_MUX_NEW_WORKTREE_CMD =========
 $GIT_MUX_NEW_WORKTREE_CMD
@@ -441,8 +436,8 @@ select_branch() {
     # remote and local branches sorted by commit date
     git for-each-ref refs/remotes refs/heads \
         --sort=-committerdate --format='%(refname:short)' |
-        # filter by query, remove 'origin/' prefix, dedupe, select branch
-        awk '/'"$GIT_MUX_BRANCH_DEFAULT_QUERY"'/{gsub("^origin/(HEAD)?","")};!x[$0]++' |
+        # filter by string, remove 'origin/' prefix, dedupe, select branch
+        awk '/'"$GIT_MUX_BRANCH_FILTER"'/{gsub("^origin/(HEAD)?","")};!x[$0]++' |
         $GIT_MUX_SELECT_CMD
 }
 
