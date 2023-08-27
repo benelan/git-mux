@@ -4,7 +4,7 @@ DOCPREFIX ?= $(PREFIX)/share/doc/$(PROGRAM)
 MANDIR ?= man/man1
 
 all: man
-	@echo Run \'make install\' to install $(PROGRAM).
+	@echo Run \'sudo make install\' to install $(PROGRAM).
 
 man: $(PROGRAM).1.txt
 	@mkdir -p $(MANDIR)
@@ -23,7 +23,7 @@ install:
 	@cp -p README.md $(DESTDIR)$(DOCPREFIX)
 	@cp -p MANUAL.md $(DESTDIR)$(DOCPREFIX)
 	@chmod 755 $(DESTDIR)$(PREFIX)/bin/$(PROGRAM)
-	@echo Install successful. Run \'make uninstall\' to uninstall $(PROGRAM).
+	@echo Install successful. Run \'sudo make uninstall\' to uninstall $(PROGRAM).
 
 uninstall:
 	@rm -f $(DESTDIR)$(PREFIX)/bin/$(PROGRAM)
