@@ -1,7 +1,7 @@
 PROGRAM ?= git-mux
 PREFIX ?= /usr
+DOCPREFIX ?= $(PREFIX)/share/doc/$(PROGRAM)
 MANDIR ?= man/man1
-DOCDIR ?= $(PREFIX)/share/doc/$(PROGRAM)
 
 all: man
 	@echo Run \'make install\' to install $(PROGRAM).
@@ -17,16 +17,17 @@ man: $(PROGRAM).1.txt
 install:
 	@mkdir -p $(DESTDIR)$(PREFIX)/bin
 	@mkdir -p $(DESTDIR)$(PREFIX)/share/$(MANDIR)
-	@mkdir -p $(DESTDIR)$(DOCDIR)
+	@mkdir -p $(DESTDIR)$(DOCPREFIX)
 	@cp -p $(PROGRAM) $(DESTDIR)$(PREFIX)/bin
 	@cp -p $(MANDIR)/$(PROGRAM).1 $(DESTDIR)$(PREFIX)/share/$(MANDIR)
-	@cp -p README.md $(DESTDIR)$(DOCDIR)
+	@cp -p README.md $(DESTDIR)$(DOCPREFIX)
+	@cp -p MANUAL.md $(DESTDIR)$(DOCPREFIX)
 	@chmod 755 $(DESTDIR)$(PREFIX)/bin/$(PROGRAM)
 	@echo Install successful. Run \'make uninstall\' to uninstall $(PROGRAM).
 
 uninstall:
-	@rm -rf $(DESTDIR)$(PREFIX)/bin/$(PROGRAM)
-	@rm -rf $(DESTDIR)$(PREFIX)/share/$(MANDIR)/$(PROGRAM).1
-	@rm -rf $(DESTDIR)$(DOCDIR)
+	@rm -f $(DESTDIR)$(PREFIX)/bin/$(PROGRAM)
+	@rm -f $(DESTDIR)$(PREFIX)/share/$(MANDIR)/$(PROGRAM).1
+	@rm -rf $(DESTDIR)$(DOCPREFIX)
 
 .PHONY: all install uninstall

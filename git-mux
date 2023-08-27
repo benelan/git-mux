@@ -55,7 +55,7 @@ usage="Usage:
   git mux clone <repository>
   git mux project [<directory>]
   git mux task [<branch>] [<window>]
-  git mux task <directory> [window>] [<command>...]"
+  git mux task <directory> [<window>] [<command>...]"
 
 error() {
     if [ -n "$1" ]; then
