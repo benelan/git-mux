@@ -156,8 +156,8 @@ EOF
 has_log_level() {
     case "$GIT_MUX_LOG_LEVEL" in
         DEBUG) test "$1" -gt 1 && return 1 ;;
-        INFO*) test "$1" -gt 2 && return 1 ;;
-        WARN*) test "$1" -gt 3 && return 1 ;;
+        INFO) test "$1" -gt 2 && return 1 ;;
+        WARN) test "$1" -gt 3 && return 1 ;;
         ERROR) test "$1" -gt 4 && return 1 ;;
         *) error "invalid GIT_MUX_LOG_LEVEL value: $GIT_MUX_LOG_LEVEL" ;;
     esac
@@ -168,10 +168,10 @@ log() {
     if [ -n "$GIT_MUX_LOGS" ] && [ "$GIT_MUX_LOGS" != "0" ]; then
         if [ -n "$GIT_MUX_LOG_LEVEL" ]; then
             case "$1" in
-                DEBUG) has_log_level 1 || return ;;
-                INFO*) has_log_level 2 || return ;;
-                WARN*) has_log_level 3 || return ;;
-                ERROR) has_log_level 4 || return ;;
+                *DEBUG) has_log_level 1 || return 0 ;;
+                *INFO*) has_log_level 2 || return 0 ;;
+                *WARN*) has_log_level 3 || return 0 ;;
+                *ERROR) has_log_level 4 || return 0 ;;
                 *) error "invalid log level: $1" ;;
             esac
         fi
