@@ -4,23 +4,25 @@ set -e
 # Configuration                                                         {{{
 # --------------------------------------------------------------------- {|}
 
+rtfm() { echo "See the ENVIRONMENT section of \`man git mux\` for details."; }
+
 if [ -z "$GIT_MUX_SELECT_CMD" ] && ! command -v fzf >/dev/null 2>&1; then
     printf "%s\n%s\n%s\n" \
         "Error: install fzf or specify a different method for" \
         "selection with the GIT_MUX_SELECT_CMD environment variable." \
-        "See the ENVIRONMENT section of \`man git mux\` for details." >&2
+        "$(rtfm)" >&2
     exit 1
 fi
+
+GIT_MUX_SELECT_CMD=${GIT_MUX_SELECT_CMD:-fzf}
 
 if [ -z "$GIT_MUX_PROJECTS" ] && [ -z "$GIT_MUX_PROJECT_PARENTS" ]; then
     printf "%s\n%s\n%s\n" \
         "Error: specifying your projects using the GIT_MUX_PROJECTS and/or" \
         "GIT_MUX_PROJECT_PARENTS environemnt variables is required." \
-        "See the ENVIRONMENT section of \`man git mux\` for details." >&2
+        "$(rtfm)" >&2
     exit 1
 fi
-
-GIT_MUX_SELECT_CMD=${GIT_MUX_SELECT_CMD:-fzf}
 
 # The following mess is a compliant solution to:
 # find $GIT_MUX_PROJECT_PARENTS -maxdepth 1 -mindepth 1 -type d
@@ -36,10 +38,16 @@ GIT_MUX_ALL_PROJECTS="${GIT_MUX_PROJECTS} $(
 
 if [ "$GIT_MUX_LOGS" = "1" ]; then
     GIT_MUX_LOGS="${XDG_STATE_HOME:-$HOME/.local/state}/git-mux/logs"
+    mkdir -p "$(dirname "$GIT_MUX_LOGS")"
 fi
 
-if [ -n "$GIT_MUX_LOGS" ] && [ "$GIT_MUX_LOGS" != "0" ]; then
-    mkdir -p "$(dirname "$GIT_MUX_LOGS")"
+if [ -n "$GIT_MUX_LOGS" ] && [ "$GIT_MUX_LOGS" != "0" ] &&
+    ! [ -d "$(dirname "$GIT_MUX_LOGS")" ]; then
+    printf "%s\n%s\n%s\n" \
+        "Error: the log file \"$GIT_MUX_LOGS\" is in a nonexistent directory." \
+        "Create the directory or set a different path using \$GIT_MUX_LOGS." \
+        "$(rtfm)" >&2
+    exit 1
 fi
 
 # --------------------------------------------------------------------- }}}
@@ -408,7 +416,7 @@ git_task() {
         log "DEBUG" "task > sanitized task name: $task_name"
 
         # naively assumes a bare repo will be using worktrees
-        if [ "$(git rev-parse --is-bare-repository 2>>"$GIT_MUX_LOGS")" = "true" ]; then
+        if [ "$(git rev-parse --is-bare-repository)" = "true" ]; then
             log "DEBUG" "task > project is bare repo, using git-worktree"
             task_start_dir="$task_start_dir/$task_name"
             log "INFO " "task > worktree directory: $task_start_dir"
@@ -433,13 +441,13 @@ git_task() {
 }
 
 is_git_root_dir() {
-    git_dir="$(git rev-parse --path-format=relative --git-dir 2>>"$GIT_MUX_LOGS")"
+    git_dir="$(git rev-parse --path-format=relative --git-dir)"
     # normal repos
     [ "$git_dir" = ".git" ] ||
         # bare repos
         [ "$git_dir" = "." ] ||
         # just for safsies
-        [ "$(git rev-parse --path-format=absolute --show-toplevel 2>>"$GIT_MUX_LOGS")" = "${1:-$(pwd)}" ]
+        [ "$(git rev-parse --path-format=absolute --show-toplevel)" = "${1:-$(pwd)}" ]
 }
 
 # Use $GIT_MUX_SELECT_CMD to select an existing git branch for creating a task.
