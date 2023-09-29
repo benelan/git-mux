@@ -3,6 +3,8 @@
 A git + tmux lovechild for blazingly fast movement between. See the
 [MANUAL](./MANUAL.md) for usage instructions.
 
+**NOTE:** the README is a WIP; [RTFM](/MANUAL.md).
+
 ## Installation
 
 The recommended installation method for a single user is to clone the
@@ -37,4 +39,27 @@ make
 sudo make install
 ```
 
+## Tips
 
+I have the following keybindings in my `.tmux.conf` for blazingly fast navigation.
+
+```conf
+%if #{>=:#{version},3.2}
+    bind C-p popup -E -E git mux project
+    bind C-t popup -E -E git mux task
+%else
+    bind C-p new-window -c '#{pane_current_path}' git mux project
+    bind C-t new-window -c '#{pane_current_path}' git mux task
+%endif
+
+bind C-h run 'git mux project $HOME'
+bind C-n run 'git mux project ~/dev/notes'
+bind C-c run 'git mux project ~/dev/work/acme-components'
+```
+
+I also have have the following in my `.bashrc`, which creates and/or attaches to a tmux session on startup.
+
+```sh
+# ensure tmux is running
+[ -z "$TMUX" ] && command -v git-mux >/dev/null 2>&1 && git-mux project "$PWD"
+```
