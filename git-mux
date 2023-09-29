@@ -41,15 +41,6 @@ if [ "$GIT_MUX_LOGS" = "1" ]; then
     mkdir -p "$(dirname "$GIT_MUX_LOGS")"
 fi
 
-if [ -n "$GIT_MUX_LOGS" ] && [ "$GIT_MUX_LOGS" != "0" ] &&
-    ! [ -d "$(dirname "$GIT_MUX_LOGS")" ]; then
-    printf "%s\n%s\n%s\n" \
-        "Error: the log file \"$GIT_MUX_LOGS\" is in a nonexistent directory." \
-        "Create the directory or set a different path using \$GIT_MUX_LOGS." \
-        "$(rtfm)" >&2
-    exit 1
-fi
-
 # --------------------------------------------------------------------- }}}
 # Usage info and logs                                                   {{{
 # --------------------------------------------------------------------- {|}
@@ -75,7 +66,7 @@ help() {
     printf "
 A git + tmux lovechild for blazingly fast movement between projects and tasks.
 
-Source: https://github.com/benelan/git-mux
+Project home page: https://github.com/benelan/git-mux
 
 %s
 
@@ -291,10 +282,10 @@ handle_project() {
     fi
 
     if [ -n "$1" ] && [ -d "$1" ]; then
-        log "INFO " "project > valid path provided: \"$1\""
+        log "DEBUG" "project > valid path provided: \"$1\""
         tmux_create_if_needed_and_attach "$1"
     else
-        log "INFO " "project > a valid path was not provided, interactively selecting a project"
+        log "DEBUG" "project > a valid path was not provided, interactively selecting a project"
         tmux_create_if_needed_and_attach "$(select_project)"
     fi
 }
@@ -323,7 +314,7 @@ find_project_directory() {
         log "DEBUG" "task > currently in home session, interactively selecting a project"
         select_project && return
     else
-        log "DEBUG" "task > using current directory as project"
+        log "DEBUG" "task > using current directory as project: \"$(pwd)\""
         pwd
     fi
 }
@@ -389,46 +380,45 @@ handle_task() {
 git_task() {
     task_start_dir="$(find_project_directory)"
 
-    log "INFO " "task > project's directory: $task_start_dir"
     cd "$task_start_dir" || return 1
 
     if is_git_root_dir "$task_start_dir"; then
+    log "DEBUG" "task > git > found the root directory of the project: $task_start_dir"
         if [ -n "$1" ]; then
             task_branch="$1"
             shift
-            log "INFO " "task > provided branch: $task_branch"
+            log "DEBUG" "task > git > branch provided as argument: $task_branch"
 
             if ! git show-ref --verify --quiet "refs/heads/$task_branch"; then
+                log "DEBUG" "task > git > branch not found and will be created"
                 task_branch_flags="-b"
-
-                log "DEBUG" "task > branch not found and will be created"
                 if [ "${task_branch#*"/"}" = "$task_branch" ]; then
                     task_branch="$GIT_MUX_BRANCH_PREFIX/$task_branch"
-                    log "DEBUG" "task > added prefix to branch: $task_branch"
+                    log "DEBUG" "task > added prefix to the argument resulting in the branch name: $task_branch"
                 fi
             fi
         else
             task_branch=$(select_branch)
-            log "INFO " "task > selected branch: $task_branch"
+            log "DEBUG" "task > git > branch selected interactively: $task_branch"
         fi
 
         task_name="$(sanitize_name "$task_branch")"
-        log "DEBUG" "task > sanitized task name: $task_name"
+        log "DEBUG" "task > tmux window name: $task_name"
 
         # naively assumes a bare repo will be using worktrees
         if [ "$(git rev-parse --is-bare-repository)" = "true" ]; then
-            log "DEBUG" "task > project is bare repo, using git-worktree"
+            log "DEBUG" "task > git > project is bare repo, using git-worktree"
             task_start_dir="$task_start_dir/$task_name"
-            log "INFO " "task > worktree directory: $task_start_dir"
+            log "DEBUG" "task > git > worktree directory: $task_start_dir"
 
             if [ ! -d "$task_start_dir" ]; then
-                log "INFO " "task > worktree does not exist, adding now"
+                log "INFO " "task > git > the worktree for branch \"$task_branch\" does not exist, creating it now"
                 # shellcheck disable=2086
                 git worktree add $task_name $task_branch_flags $task_branch >&2
                 export GIT_MUX_NEW_WORKTREE="1"
             fi
         else
-            log "INFO " "task > checking out branch"
+            log "WARN" "task > git > repo is not using worktrees, checking out branch instead: \"$task_branch\""
             # shellcheck disable=2086
             git checkout $task_branch_flags $task_branch >&2
         fi
