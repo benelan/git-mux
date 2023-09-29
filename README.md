@@ -57,7 +57,8 @@ bind C-n run 'git mux project ~/dev/notes'
 bind C-c run 'git mux project ~/dev/work/acme-components'
 ```
 
-I also have have the following in my `.bashrc`, which creates and/or attaches to a tmux session on startup.
+I also have have the following in my `.bashrc`, which creates and/or attaches to
+a tmux session on startup.
 
 ```sh
 # ensure tmux is running

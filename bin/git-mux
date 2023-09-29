@@ -383,7 +383,7 @@ git_task() {
     cd "$task_start_dir" || return 1
 
     if is_git_root_dir "$task_start_dir"; then
-    log "DEBUG" "task > git > found the root directory of the project: $task_start_dir"
+        log "DEBUG" "task > git > found the root directory of the project: $task_start_dir"
         if [ -n "$1" ]; then
             task_branch="$1"
             shift
