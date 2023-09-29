@@ -6,22 +6,22 @@ MANDIR ?= man/man1
 all: man
 	@echo Run \'sudo make install\' to install $(PROGRAM).
 
-man: $(PROGRAM).1.txt
-	@mkdir -p $(MANDIR)
-	@pandoc --standalone --from markdown-smart --to man $< --output $(MANDIR)/$(PROGRAM).1
-	@pandoc --standalone --from markdown-smart --to gfm $< --output MANUAL.md
-	@sed -i 's%\*\$$%*\\$$%g' MANUAL.md
-	@sed -i 's%\*ENVIRONMENT\*%[ENVIRONMENT](#environment)%g' MANUAL.md
-	@sed -i 's%^#%##%g' MANUAL.md
+man: docs/$(PROGRAM).1.txt
+	@mkdir -p bin/$(MANDIR)
+	@pandoc --standalone --from markdown-smart --to man $< --output bin/$(MANDIR)/$(PROGRAM).1
+	@pandoc --standalone --from markdown-smart --to gfm $< --output docs/MANUAL.md
+	@sed -i 's%\*\$$%*\\$$%g' docs/MANUAL.md
+	@sed -i 's%\*ENVIRONMENT\*%[ENVIRONMENT](#environment)%g' docs/MANUAL.md
+	@sed -i 's%^#%##%g' docs/MANUAL.md
 
 install:
 	@mkdir -p $(DESTDIR)$(PREFIX)/bin
 	@mkdir -p $(DESTDIR)$(PREFIX)/share/$(MANDIR)
 	@mkdir -p $(DESTDIR)$(DOCPREFIX)
-	@cp -p $(PROGRAM) $(DESTDIR)$(PREFIX)/bin
-	@cp -p $(MANDIR)/$(PROGRAM).1 $(DESTDIR)$(PREFIX)/share/$(MANDIR)
+	@cp -p bin/$(PROGRAM) $(DESTDIR)$(PREFIX)/bin
+	@cp -p bin/$(MANDIR)/$(PROGRAM).1 $(DESTDIR)$(PREFIX)/share/$(MANDIR)
 	@cp -p README.md $(DESTDIR)$(DOCPREFIX)
-	@cp -p MANUAL.md $(DESTDIR)$(DOCPREFIX)
+	@cp -p docs/MANUAL.md $(DESTDIR)$(DOCPREFIX)
 	@chmod 755 $(DESTDIR)$(PREFIX)/bin/$(PROGRAM)
 	@echo Install successful. Run \'sudo make uninstall\' to uninstall $(PROGRAM).
 
