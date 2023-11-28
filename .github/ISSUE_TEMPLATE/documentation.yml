@@ -1,5 +1,5 @@
 name: Documentation
-description: Report issues with, or make requests for documentation
+description: Report issues with or make requests for documentation
 labels: ["docs"]
 assignees:
   - benelan

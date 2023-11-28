@@ -32,7 +32,7 @@ body:
       description: Clear, numbered steps for reproducing the issue.
       placeholder: |
         1. Run the script with the following arguments: ...
-        2. Check the console for an error ...
+        2. Check the logs for an error ...
         3. ...
     validations:
       required: true
@@ -40,8 +40,8 @@ body:
     id: version
     attributes:
       label: Reproduction Version
-      description: The latest version that reproduces the issue.
-      placeholder: v2.3.0
+      description: The latest version that reproduces the issue (use `git-mux -v` to get the version)
+      placeholder: 0.0.0 # x-release-please-version
     validations:
       required: true
   - type: input
@@ -49,17 +49,13 @@ body:
     attributes:
       label: Regression?
       description: Please provide the last working version if the issue is a regression.
-      placeholder: v2.0.0
+      placeholder: 0.1.0
     validations:
       required: false
   - type: textarea
     id: relevant
     attributes:
       label: Relevant Info
-      description: Environment, stack traces, related issues, suggestions/resources on how to fix, etc.
-      placeholder: |
-        Windows 10
-        Uncaught TypeError: Cannot read property of undefined
-        ...
+      description: Environment, logs, related issues, suggestions/resources on how to fix, etc.
     validations:
       required: false
