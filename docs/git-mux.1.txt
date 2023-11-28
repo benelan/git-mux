@@ -1,6 +1,6 @@
-% git-mux(1) git-mux user manual
+% GIT-MUX(1) git mux 0.1.0 | User Manual <!-- x-release-please-version -->
 % Ben Elan <no-reply@benelan.dev>
-% 2023-08-26
+% 2023-11-27
 
 # NAME
 

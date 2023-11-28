@@ -22,7 +22,6 @@ jobs:
             bin/git-mux
             docs/git-mux.1.txt
           plugins: sentence-case
-          prerelease: true
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

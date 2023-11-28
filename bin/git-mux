@@ -41,6 +41,8 @@ if [ "$GIT_MUX_LOGS" = "1" ]; then
     mkdir -p "$(dirname "$GIT_MUX_LOGS")"
 fi
 
+GIT_MUX_VERSION="0.1.0" # x-release-please-version
+
 # --------------------------------------------------------------------- }}}
 # Usage info and logs                                                   {{{
 # --------------------------------------------------------------------- {|}
@@ -464,6 +466,7 @@ main() {
         config) config_values >&2 && exit 0 ;; # @internal
         help | --help) man git-mux ;;
         h | -h) help ;;
+        v | -v | version | --version) printf "%s\n" "$GIT_MUX_VERSION" ;;
         c | clone) bare_clone "$@" ;;
         p | project) handle_project "$@" ;;
         t | task) handle_task "$@" ;;
