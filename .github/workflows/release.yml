@@ -25,6 +25,7 @@ jobs:
             .github/ISSUE_TEMPLATE/bug.yml
           prerelease: true
           bump-minor-pre-major: true
+          release-as: 0.1.0
           plugins: sentence-case
       - uses: actions/checkout@v4
         with:
