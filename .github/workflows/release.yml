@@ -21,6 +21,9 @@ jobs:
           extra-files: |
             bin/git-mux
             docs/git-mux.1.txt
+          prerelease: true
+          bump-minor-pre-major: true
+          release-as: 0.1.0
           plugins: sentence-case
       - uses: actions/checkout@v4
         with:
