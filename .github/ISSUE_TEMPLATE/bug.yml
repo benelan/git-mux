@@ -41,7 +41,7 @@ body:
     attributes:
       label: Reproduction Version
       description: The latest version that reproduces the issue (use `git-mux -v` to get the version)
-      placeholder: 0.0.0 # x-release-please-version
+      placeholder: 0.1.0 # x-release-please-version
     validations:
       required: true
   - type: input
