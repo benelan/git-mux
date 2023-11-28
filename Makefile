@@ -36,12 +36,12 @@ lint:
 		shellcheck bin/$(PROGRAM)
 	# https://github.com/igorshubovych/markdownlint-cli
 	command -v markdownlint >/dev/null 2>&1 && \
-		markdownlint . --disable first-line-heading
+		markdownlint {README,CONTRIBUTING,docs/**/*}.md --disable first-line-heading
 
 format: man
 	# https://github.com/prettier/prettier
 	command -v prettier >/dev/null 2>&1 && \
-		prettier --write .
+		prettier --write {README,CONTRIBUTING,docs/**/*}.md .github/**/*.{md,yml}
 	# https://github.com/mvdan/sh
 	command -v shfmt >/dev/null 2>&1 && \
 		shfmt --posix --indent 4 --case-indent --write bin/$(PROGRAM)
@@ -50,7 +50,7 @@ format: man
 		shellcheck --format=diff bin/$(PROGRAM) | git apply --allow-empty
 	# fix some markdownlint issues
 	command -v markdownlint >/dev/null 2>&1 && \
-		markdownlint . --fix >/dev/null 2>&1 || true
+		markdownlint {README,CONTRIBUTING,docs/**/*}.md --fix >/dev/null 2>&1 || true
 
 changelog:
 	# https://github.com/conventional-changelog/conventional-changelog
