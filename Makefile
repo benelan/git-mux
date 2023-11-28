@@ -3,7 +3,7 @@ PREFIX ?= /usr
 DOCPREFIX ?= $(PREFIX)/share/doc/$(PROGRAM)
 MANDIR ?= man/man1
 
-all: man
+all: format
 	echo Run \'sudo make install\' to install $(PROGRAM).
 
 man: docs/$(PROGRAM).1.txt
@@ -32,22 +32,28 @@ uninstall:
 
 lint:
 	# https://github.com/koalaman/shellcheck
-	shellcheck bin/$(PROGRAM)
+	command -v shellcheck >/dev/null 2>&1 && \
+		shellcheck bin/$(PROGRAM)
 	# https://github.com/igorshubovych/markdownlint-cli
-	markdownlint . --disable first-line-heading
+	command -v markdownlint >/dev/null 2>&1 && \
+		markdownlint . --disable first-line-heading
 
 format: man
-	# fix some shellcheck issues by piping its diff format to git apply
-	shellcheck --format=diff bin/$(PROGRAM) | git apply --allow-empty
-	# fix some markdownlint issues
-	markdownlint . --disable MD041 --dot --fix >/dev/null 2>&1 || true
-	# https://github.com/mvdan/sh
-	shfmt --posix --indent 4 --case-indent --write bin/$(PROGRAM)
 	# https://github.com/prettier/prettier
-	prettier --write .
+	command -v prettier >/dev/null 2>&1 && \
+		prettier --write .
+	# https://github.com/mvdan/sh
+	command -v shfmt >/dev/null 2>&1 && \
+		shfmt --posix --indent 4 --case-indent --write bin/$(PROGRAM)
+	# fix some shellcheck issues by piping its diff format to git apply
+	 command -v shellcheck >/dev/null 2>&1 && \
+		shellcheck --format=diff bin/$(PROGRAM) | git apply --allow-empty
+	# fix some markdownlint issues
+	command -v markdownlint >/dev/null 2>&1 && \
+		markdownlint . --fix >/dev/null 2>&1 || true
 
 changelog:
 	# https://github.com/conventional-changelog/conventional-changelog
-	conventional-changelog --preset conventionalcommits --infile CHANGELOG.md --same-file	
+	conventional-changelog --preset conventionalcommits --infile CHANGELOG.md --same-file
 
 .PHONY: all install uninstall lint format changelog

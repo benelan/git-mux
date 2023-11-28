@@ -14,40 +14,40 @@ projects and tasks
 ## COMMANDS
 
 - **c**, **clone**  
-   Clone and configure a bare **git**(1) \<repository\> for use with
+  Clone and configure a bare **git**(1) \<repository\> for use with
   worktrees.
 - **p**, **project**  
-   Create or switch to a _project_, which is a **tmux**(1) session.
+  Create or switch to a _project_, which is a **tmux**(1) session.
   Projects are also usually (but not required to be) a **git**(1)
   repo.
 - **t**, **task**  
-   Create, switch, or send commands to a _task_, which is a **tmux**(1)
+  Create, switch, or send commands to a _task_, which is a **tmux**(1)
   window. Tasks are also usually (but not required to be) a
   **git-worktree**(1) or **git-branch**(1).
 - **h**, **help**  
-   Print a concise help message to **stderr**(3) or open the
+  Print a concise help message to **stderr**(3) or open the
   **git-mux** man page, respectively.
 
 ## EXAMPLES
 
 - **git mux p**  
-   Select a _project_, then create and/or switch to its **tmux**(1)
+  Select a _project_, then create and/or switch to its **tmux**(1)
   session. Selects with **fzf**(1) by default, but the command can be
   changed using **\$GIT_MUX_SELECT_CMD**. See the [ENVIRONMENT](#environment)
   section.
 - **git mux project \~/projects/my-app**  
-   Directly create and/or switch to a _project_ (useful for a keymap or
+  Directly create and/or switch to a _project_ (useful for a keymap or
   alias).
 - **git mux task feature/123**  
-   Create and/or switch to a **tmux**(1) \<window\> named "123" via
+  Create and/or switch to a **tmux**(1) \<window\> named "123" via
   **basename**(1). Open the window at "feature/123" if it is a valid
   \<directory\>, otherwise assume it is a **git**(1) \<branch\> name.
   Create and/or switch to the **git-worktree**(1) if the _project_ is
   a bare repo, otherwise checkout the **git-branch**(1).
 - **git mux t**  
-   Select an existing **git-branch**(1) for the _task_.
+  Select an existing **git-branch**(1) for the _task_.
 - **git mux task \~/projects/my-app tests npm i && npm test**  
-   Install dependencies and run tests in a **tmux**(1) \<window\> named
+  Install dependencies and run tests in a **tmux**(1) \<window\> named
   "tests" without switching to it. Specifying the \<window\> name is
   required when sending commands.
 
@@ -59,7 +59,7 @@ or **\$GIT_MUX_PROJECT_PARENTS** is required, and setting both will
 combine their values. All other configuration is optional.
 
 - **GIT_MUX_PROJECTS**  
-   Space delimited list of individual _project_ directories for
+  Space delimited list of individual _project_ directories for
   selection. The paths must be absolute or start with "\~" and cannot
   contain spaces.
 
@@ -68,7 +68,7 @@ combine their values. All other configuration is optional.
   ```
 
 - **GIT_MUX_PROJECT_PARENTS**  
-   Space delimited list of directories that contain projects, defaults
+  Space delimited list of directories that contain projects, defaults
   to **\$PROJECTS** if set. The immediate child directories (depth=1)
   of each parent are used for selection.
 
@@ -112,7 +112,7 @@ Assuming the following file structure:
 ```
 
 - **GIT_MUX_SELECT_CMD**  
-   Command used to select a _project_, defaults to **fzf**(1). This can
+  Command used to select a _project_, defaults to **fzf**(1). This can
   be any command that receives the directory list from **stdin**(3)
   and sends a single, selected directory to **stdout**(3).
 
@@ -136,7 +136,7 @@ Assuming the following file structure:
   ```
 
 - **GIT_MUX_BRANCH_PREFIX**  
-   A \<prefix\> string to prepend to the name of new branches created
+  A \<prefix\> string to prepend to the name of new branches created
   via the _task_ command. When set, the resulting **git-branch**(1)
   name is "\<prefix\>/\<branch\>". This option is ignored if the
   \<branch\> name provided to _task_ already contains a "/".
@@ -150,7 +150,7 @@ Assuming the following file structure:
   ```
 
 - **GIT_MUX_NEW_WORKTREE_CMD**  
-   Command(s) to execute in the **tmux**(1) window when a new
+  Command(s) to execute in the **tmux**(1) window when a new
   **git-worktree**(1) is created via the _task_ command. Unset by
   default. You can assume that **\$PWD** is the root directory of the
   new worktree.
@@ -167,7 +167,7 @@ Assuming the following file structure:
   example.
 
 - **GIT_MUX_LOGS**  
-   A path to the log file. Logs are disabled if set to "0" or unset,
+  A path to the log file. Logs are disabled if set to "0" or unset,
   which is the default.
 
   If set to "1", the logs are saved to
@@ -175,7 +175,7 @@ Assuming the following file structure:
   besides "1" and "0" are treated as a path.
 
 - **GIT_MUX_LOG_LEVEL**  
-   The minimum level of log entries to save, defaults to all levels if
+  The minimum level of log entries to save, defaults to all levels if
   logging is enabled via **\$GIT_MUX_LOGS**. The log levels are:
 
   _DEBUG_ \< _INFO_ \< _WARN_ \< _ERROR_
@@ -203,7 +203,7 @@ Try these troubleshooting tips if you are experiencing issues:
 
 If none of the troubleshooting steps helped resolve the issue, please
 submit an issue on GitHub:  
-_<https://github.com/benelan/git-mux/issues>_
+*<https://github.com/benelan/git-mux/issues>*
 
 ## COMPATIBILITY
 
