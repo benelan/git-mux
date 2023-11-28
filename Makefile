@@ -11,9 +11,9 @@ man: docs/$(PROGRAM).1.txt
 	pandoc --standalone --from markdown-smart --to man $< --output bin/$(MANDIR)/$(PROGRAM).1
 	pandoc --standalone --from markdown-smart --to gfm $< --output docs/MANUAL.md
 	sed -i 's%\*\$$%*\\$$%g' docs/MANUAL.md
-	sed -i 's%\*ENVIRONMENT\*%[ENVIRONMENT](#environment)%g' docs/MANUAL.md
+	sed -i 's%\*\(ENVIRONMENT\)\*%[\1](#environment)%g' docs/MANUAL.md
 	sed -i 's%^#%##%g' docs/MANUAL.md
-
+	sed -i 's%\("User Manual"\)%\1 \\" x-release-please-version%' bin/$(MANDIR)/$(PROGRAM).1
 install:
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
 	mkdir -p $(DESTDIR)$(PREFIX)/share/$(MANDIR)

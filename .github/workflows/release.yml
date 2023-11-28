@@ -20,6 +20,7 @@ jobs:
           default-branch: master
           extra-files: |
             bin/git-mux
+            bin/man/man1/git-mux.1
             docs/git-mux.1.txt
           prerelease: true
           bump-minor-pre-major: true
