@@ -70,7 +70,8 @@ combine their values. All other configuration is optional.
 - **GIT_MUX_PROJECT_PARENTS**  
   Space delimited list of directories that contain projects, defaults
   to **\$PROJECTS** if set. The immediate child directories (depth=1)
-  of each parent are used for selection.
+  of each parent are used for selection. The paths must be absolute or
+  start with "\~" and cannot contain spaces.
 
   ```sh
   export GIT_MUX_PROJECT_PARENTS="~/dev/work ~/dev/personal"

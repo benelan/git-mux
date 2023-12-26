@@ -197,6 +197,8 @@ log() {
 
 arg_is_flag() { case $1 in -*) true ;; *) false ;; esac }
 
+absolute_path() { [ -d "$1" ] && cd "$1" && pwd; }
+
 sanitize_name() {
     basename "$1" | tr "./" "__"
 }
@@ -215,7 +217,7 @@ has_tmux_server() {
 }
 
 tmux_create_if_needed_and_attach() {
-    project_path="${1:-$PWD}"
+    project_path="${1:-$(pwd)}"
     project_name="$(sanitize_name "$project_path")"
     project_info="\"$project_name\" at path \"$project_path\""
 
@@ -239,7 +241,6 @@ tmux_create_if_needed_and_attach() {
 
     unset project_path project_name project_info
 }
-
 
 # --------------------------------------------------------------------- }}}
 # Clone command                                                         {{{
@@ -292,7 +293,7 @@ handle_project() {
 
     if [ -n "$1" ] && [ -d "$1" ]; then
         log "DEBUG" "project > valid path provided: \"$1\""
-        tmux_create_if_needed_and_attach "$1"
+        tmux_create_if_needed_and_attach "$(absolute_path "$1")"
     else
         log "DEBUG" "project > a valid path was not provided, interactively selecting a project"
         tmux_create_if_needed_and_attach "$(select_project)"
@@ -353,7 +354,7 @@ handle_task() {
     # Use arg1 for the task if it is a valid directory.
     # Otherwise assume it is a git branch name.
     if [ -n "$1" ] && [ -d "$1" ]; then
-        task_dir="$(cd "$1" && pwd)"
+        task_dir="$(absolute_path "$1")"
         task_name="${2:-"$(sanitize_name "$task_dir")"}"
     else
         git_task "$@"
