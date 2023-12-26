@@ -473,14 +473,15 @@ main() {
         error "a command is required"
     fi
     shift
+
     case $command in
         config) config_values >&2 && exit 0 ;; # @internal
         help | --help) man git-mux ;;
         h | -h) help ;;
         v | -v | version | --version) printf "%s\n" "$GIT_MUX_VERSION" ;;
-        c | clone) bare_clone "$@" ;;
-        p | project) handle_project "$@" ;;
-        t | task) handle_task "$@" ;;
+        c | -c | clone | --clone) bare_clone "$@" ;;
+        p | -p | project | --project) handle_project "$@" ;;
+        t | -t | task | --task) handle_task "$@" ;;
         *) error "invalid command: \"$command\"" ;;
     esac
 }
