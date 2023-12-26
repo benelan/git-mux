@@ -152,8 +152,8 @@ Assuming the following file structure:
 .fi
 .TP
 \f[B]GIT_MUX_SELECT_CMD\f[R]
-Command used to select a \f[I]project\f[R], defaults to
-\f[B]fzf\f[R](1).
+Command used to select a \f[I]project\f[R] or \f[I]task\f[R].
+Defaults to \f[B]fzf\f[R](1).
 This can be any command that receives the directory list from
 \f[B]stdin\f[R](3) and sends a single, selected directory to
 \f[B]stdout\f[R](3).
@@ -197,7 +197,7 @@ For example, the following would create a \f[B]git-branch\f[R](1) named
 .IP
 .nf
 \f[C]
-export GIT_MUX_BRANCH_PREFIX=\[dq]$(id -un)\[dq]
+export GIT_MUX_BRANCH_PREFIX=\[dq]$(git config --global github.user || id -un)\[dq]
 git mux task fix-bug
 \f[R]
 .fi
@@ -217,6 +217,28 @@ relevant):
 .nf
 \f[C]
 export GIT_MUX_NEW_WORKTREE_CMD=\[aq][ -f \[dq]./package.json\[dq] ] && npm i\[aq]
+\f[R]
+.fi
+.PP
+Creating a script somewhere on your \f[B]$PATH\f[R] for more complicated
+commands is recommended.
+See \f[B]$GIT_MUX_SELECT_CMD\f[R] above for an example.
+.RE
+.TP
+\f[B]GIT_MUX_NEW_SESSION_CMD\f[R]
+Command(s) to execute when a new \f[B]tmux\f[R](1) session is created
+via the \f[B]project\f[R] command.
+Unset by default.
+You can assume that \f[B]$PWD\f[R] is the root directory of the
+specified project.
+.RS
+.PP
+For example, to rename the \f[B]tmux\f[R](1) window to
+\[dq]scratch\[dq]:
+.IP
+.nf
+\f[C]
+export GIT_MUX_NEW_SESSION_CMD=\[aq]tmux rename-window scratch\[aq]
 \f[R]
 .fi
 .PP

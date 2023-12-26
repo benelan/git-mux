@@ -19,7 +19,7 @@ GIT_MUX_SELECT_CMD=${GIT_MUX_SELECT_CMD:-fzf}
 if [ -z "$GIT_MUX_PROJECTS" ] && [ -z "$GIT_MUX_PROJECT_PARENTS" ]; then
     printf "%s\n%s\n%s\n" \
         "Error: specifying your projects using the GIT_MUX_PROJECTS and/or" \
-        "GIT_MUX_PROJECT_PARENTS environemnt variables is required." \
+        "GIT_MUX_PROJECT_PARENTS environment variables is required." \
         "$(rtfm)" >&2
     exit 1
 fi
@@ -141,6 +141,9 @@ $GIT_MUX_BRANCH_FILTER
 ========= GIT_MUX_NEW_WORKTREE_CMD =========
 $GIT_MUX_NEW_WORKTREE_CMD
 
+========= GIT_MUX_NEW_SESSION_CMD =========
+$GIT_MUX_NEW_SESSION_CMD
+
 ========= GIT_MUX_LOGS =========
 $GIT_MUX_LOGS
 
@@ -217,19 +220,27 @@ has_tmux_server() {
 tmux_create_if_needed_and_attach() {
     project_path="${1:-$PWD}"
     project_name="$(sanitize_name "$project_path")"
-    if in_tmux; then
-        if ! tmux_session_exists "$project_name"; then
-            log "INFO " \
-                "project > creating \"$project_name\" at path \"$project_path\""
-            tmux new-session -Adc "$project_path" -s "$project_name"
+    project_info="\"$project_name\" at path \"$project_path\""
+
+    if ! tmux_session_exists "$project_name"; then
+        log "INFO " "project > creating $project_info"
+        tmux new-session -Adc "$project_path" -s "$project_name"
+
+        if [ -n "$GIT_MUX_NEW_SESSION_CMD" ]; then
+            log "INFO " "project > executing new tmux session command: \"$GIT_MUX_NEW_SESSION_CMD\""
+            tmux send-keys -t "$project_name" "$GIT_MUX_NEW_SESSION_CMD" Enter
         fi
-        log "INFO " "project > switching to \"$project_name\" at path \"$project_path\""
+    fi
+
+    if in_tmux; then
+        log "INFO " "project > switching to $project_info"
         tmux switch-client -t "$project_name"
     else
-        log "INFO " "project > creating or attaching to \"$project_name\" at path \"$project_path\""
-        tmux new-session -As "$project_name" -c "$project_path"
+        log "INFO " "project > attaching to $project_info"
+        tmux attach-session -t "$project_name"
     fi
-    unset project_path project_name
+
+    unset project_path project_name project_info
 }
 
 has_tmux_server && GIT_MUX_TMUX_SESSION="$(tmux display-message -p "#S")"

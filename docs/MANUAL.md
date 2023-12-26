@@ -112,9 +112,10 @@ Assuming the following file structure:
 ```
 
 - **GIT_MUX_SELECT_CMD**  
-  Command used to select a _project_, defaults to **fzf**(1). This can
-  be any command that receives the directory list from **stdin**(3)
-  and sends a single, selected directory to **stdout**(3).
+  Command used to select a _project_ or _task_. Defaults to
+  **fzf**(1). This can be any command that receives the directory list
+  from **stdin**(3) and sends a single, selected directory to
+  **stdout**(3).
 
   For example, to use **dialog**(1), create the following script
   somewhere on your **\$PATH** (e.g.,
@@ -145,7 +146,7 @@ Assuming the following file structure:
   "\<username\>/fix-bug":
 
   ```sh
-  export GIT_MUX_BRANCH_PREFIX="$(id -un)"
+  export GIT_MUX_BRANCH_PREFIX="$(git config --global github.user || id -un)"
   git mux task fix-bug
   ```
 
@@ -160,6 +161,21 @@ Assuming the following file structure:
 
   ```sh
   export GIT_MUX_NEW_WORKTREE_CMD='[ -f "./package.json" ] && npm i'
+  ```
+
+  Creating a script somewhere on your **\$PATH** for more complicated
+  commands is recommended. See **\$GIT_MUX_SELECT_CMD** above for an
+  example.
+
+- **GIT_MUX_NEW_SESSION_CMD**  
+  Command(s) to execute when a new **tmux**(1) session is created via
+  the **project** command. Unset by default. You can assume that
+  **\$PWD** is the root directory of the specified project.
+
+  For example, to rename the **tmux**(1) window to "scratch":
+
+  ```sh
+  export GIT_MUX_NEW_SESSION_CMD='tmux rename-window scratch'
   ```
 
   Creating a script somewhere on your **\$PATH** for more complicated
