@@ -68,7 +68,7 @@ help() {
     printf "
 A git + tmux lovechild for blazingly fast movement between projects and tasks.
 
-Project home page: https://github.com/benelan/git-mux
+Homepage: https://github.com/benelan/git-mux
 
 %s
 
@@ -129,17 +129,17 @@ $GIT_MUX_PROJECTS
 ========= GIT_MUX_SELECT_CMD =========
 $GIT_MUX_SELECT_CMD
 
+========= GIT_MUX_NEW_SESSION_CMD =========
+$GIT_MUX_NEW_SESSION_CMD
+
+========= GIT_MUX_NEW_WORKTREE_CMD =========
+$GIT_MUX_NEW_WORKTREE_CMD
+
 ========= GIT_MUX_BRANCH_PREFIX =========
 $GIT_MUX_BRANCH_PREFIX
 
 ========= GIT_MUX_BRANCH_FILTER =========
 $GIT_MUX_BRANCH_FILTER
-
-========= GIT_MUX_NEW_WORKTREE_CMD =========
-$GIT_MUX_NEW_WORKTREE_CMD
-
-========= GIT_MUX_NEW_SESSION_CMD =========
-$GIT_MUX_NEW_SESSION_CMD
 
 ========= GIT_MUX_LOGS =========
 $GIT_MUX_LOGS
@@ -199,24 +199,73 @@ arg_is_flag() { case $1 in -*) true ;; *) false ;; esac }
 
 absolute_path() { [ -d "$1" ] && cd "$1" && pwd; }
 
-sanitize_name() {
-    basename "$1" | tr "./" "__"
+sanitize_name() { basename "$1" | tr "./" "__"; }
+
+# 60% of the time, it works every time (requires 'origin' or 'upstream' remote)
+# shellcheck disable=2120
+default_branch() {
+    git -C "${1:-$(pwd)}" remote show "$(
+        git remote | grep -Eo "(upstream|origin)" | tail -1
+    )" | grep "HEAD branch" | cut -d" " -f5
+}
+
+is_git_work_tree_root() {
+    [ "$(git -C "${1:-$(pwd)}" rev-parse --is-inside-work-tree)" = "true" ] &&
+        [ "$(git -C "${1:-$(pwd)}" rev-parse --show-toplevel)" = "${1:-$(pwd)}" ]
+}
+
+is_git_bare_repo_root() {
+    git_dir="$(git -C "${1:-$(pwd)}" rev-parse --path-format=relative --git-dir)"
+    [ "$(git -C "${1:-$(pwd)}" rev-parse --is-bare-repository)" = "true" ] &&
+        [ "${git_dir#*"/"}" = "$git_dir" ]
+}
+
+is_git_root_dir() {
+    is_git_work_tree_root "${1:-$(pwd)}" || is_git_bare_repo_root "${1:-$(pwd)}"
 }
 
 # tmux utils from https://github.com/thoughtbot/dotfiles/blob/main/bin/tat
-tmux_session_exists() {
-    tmux has-session -t "=$1" >/dev/null 2>&1
+
+tmux_session_exists() { tmux has-session -t "=$1" >/dev/null 2>&1; }
+
+in_tmux() { [ -n "$TMUX" ]; }
+
+has_tmux_server() { tmux run 2>/dev/null; }
+
+# --------------------------------------------------------------------- }}}
+# Clone command                                                         {{{
+# --------------------------------------------------------------------- {|}
+
+# Clones a bare repo for use with git-worktree and creates an
+# initial worktree for the repo's default branch.
+# https://git-scm.com/docs/git-worktree
+bare_clone() {
+    if arg_is_flag "$1" || arg_is_flag "$2"; then
+        error "invalid argument(s) for clone command: \"$*\""
+    fi
+
+    new_repo_dir="${2:-"$(basename "$1" .git)"}"
+    mkdir -p "$new_repo_dir"
+    cd "$new_repo_dir" || return
+
+    log "INFO " "clone > cloning bare repo for \"$1\" in \"$(pwd)\""
+    git clone --bare "$1" .git >&2
+    git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*" >&2
+    git fetch origin >&2
+
+    new_branch="$(default_branch)"
+    log "INFO " "clone > creating worktree for default branch: $new_branch"
+    git worktree add "$(sanitize_name "$new_branch")" "$new_branch" >&2
+
+    cd "$new_branch" || return
+    unset new_repo_dir new_branch
 }
 
-in_tmux() {
-    [ -n "$TMUX" ]
-}
+# --------------------------------------------------------------------- }}}
+# Project command                                                       {{{
+# --------------------------------------------------------------------- {|}
 
-has_tmux_server() {
-    tmux run 2>/dev/null
-}
-
-tmux_create_if_needed_and_attach() {
+project_create_if_needed_and_attach() {
     project_path="${1:-$(pwd)}"
     project_name="$(sanitize_name "$project_path")"
     project_info="\"$project_name\" at path \"$project_path\""
@@ -242,44 +291,6 @@ tmux_create_if_needed_and_attach() {
     unset project_path project_name project_info
 }
 
-# --------------------------------------------------------------------- }}}
-# Clone command                                                         {{{
-# --------------------------------------------------------------------- {|}
-
-# Clones a bare repo for use with git-worktree and creates an
-# initial worktree for the repo's default branch.
-# https://git-scm.com/docs/git-worktree
-bare_clone() {
-    if arg_is_flag "$1" || arg_is_flag "$2"; then
-        error "invalid argument(s) for clone command: \"$*\""
-    fi
-
-    new_repo_dir="${2:-"$(basename "$1" .git)"}"
-    mkdir -p "$new_repo_dir"
-    cd "$new_repo_dir" || return
-
-    log "INFO " "clone > cloning bare repo for \"$1\" in \"$(pwd)\""
-    git clone --bare "$1" .git >&2
-    git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*" >&2
-    git fetch origin >&2
-
-    # 60% of the time, it works every time (requires 'origin' or 'upstream' remote)
-    default_branch="$(
-        git remote show "$(
-            git remote | grep -Eo "(upstream|origin)" | tail -1
-        )" | grep "HEAD branch" | cut -d" " -f5
-    )"
-
-    log "INFO " "clone > creating worktree for default branch: $default_branch"
-    git worktree add "$default_branch" "$default_branch" >&2
-    cd "$default_branch" || return
-    unset new_repo_dir default_branch
-}
-
-# --------------------------------------------------------------------- }}}
-# Project command                                                       {{{
-# --------------------------------------------------------------------- {|}
-
 # See `man git mux` for details on the following environment variables.
 # shellcheck disable=2086
 select_project() { printf "%s\n" $GIT_MUX_ALL_PROJECTS | $GIT_MUX_SELECT_CMD; }
@@ -293,10 +304,10 @@ handle_project() {
 
     if [ -n "$1" ] && [ -d "$1" ]; then
         log "DEBUG" "project > valid path provided: \"$1\""
-        tmux_create_if_needed_and_attach "$(absolute_path "$1")"
+        project_create_if_needed_and_attach "$(absolute_path "$1")"
     else
         log "DEBUG" "project > a valid path was not provided, interactively selecting a project"
-        tmux_create_if_needed_and_attach "$(select_project)"
+        project_create_if_needed_and_attach "$(select_project)"
     fi
 }
 
@@ -314,6 +325,7 @@ find_project_directory() {
         )" = "$GIT_MUX_TMUX_SESSION" ]; then
             log "DEBUG" "task > found a matching project: \"$project\""
             echo "$project"
+
             unset project
             return
         fi
@@ -327,6 +339,16 @@ find_project_directory() {
         log "DEBUG" "task > using current directory as project: \"$(pwd)\""
         pwd
     fi
+}
+
+# Use $GIT_MUX_SELECT_CMD to select an existing git branch for creating a task.
+select_branch() {
+    # remote and local branches sorted by commit date
+    git for-each-ref refs/remotes refs/heads \
+        --sort=-committerdate --format='%(refname:short)' |
+        # filter by string, remove 'origin/' prefix, dedupe, select branch
+        awk '/'"$GIT_MUX_BRANCH_FILTER"'/{gsub("^origin/(HEAD)?","")};!x[$0]++' |
+        $GIT_MUX_SELECT_CMD
 }
 
 # Attaches/switches to a tmux window. If the next argument is a valid path,
@@ -357,7 +379,7 @@ handle_task() {
         task_dir="$(absolute_path "$1")"
         task_name="${2:-"$(sanitize_name "$task_dir")"}"
     else
-        git_task "$@"
+        handle_git_task "$@"
         return 0
     fi
 
@@ -369,9 +391,8 @@ handle_task() {
 
     # if provided, execute commands in the tmux window for new worktrees
     if [ -n "$GIT_MUX_NEW_WORKTREE" ] && [ -n "$GIT_MUX_NEW_WORKTREE_CMD" ]; then
-        log "INFO " "task > executing GIT_MUX_NEW_WORKTREE_CMD: \"$GIT_MUX_NEW_WORKTREE_CMD\""
-        tmux send-keys -t "$GIT_MUX_TMUX_SESSION:$task_name" \
-            "$GIT_MUX_NEW_WORKTREE_CMD" Enter
+        log "INFO " "task > executing new git worktree command: \"$GIT_MUX_NEW_WORKTREE_CMD\""
+        tmux send-keys -t "$GIT_MUX_TMUX_SESSION:$task_name" "$GIT_MUX_NEW_WORKTREE_CMD" Enter
         unset GIT_MUX_NEW_WORKTREE
     fi
 
@@ -393,13 +414,14 @@ handle_task() {
 
 # The logic that handles the git portion of the 'task' command.
 # See handle_task documentation above for more info.
-git_task() {
+handle_git_task() {
     task_start_dir="$(find_project_directory)"
 
     cd "$task_start_dir" || return 1
 
     if is_git_root_dir "$task_start_dir"; then
         log "DEBUG" "task > git > found the root directory of the project: $task_start_dir"
+
         if [ -n "$1" ]; then
             task_branch="$1"
             shift
@@ -408,6 +430,7 @@ git_task() {
             if ! git show-ref --verify --quiet "refs/heads/$task_branch"; then
                 log "DEBUG" "task > git > branch not found and will be created"
                 task_branch_flags="-b"
+
                 if [ "${task_branch#*"/"}" = "$task_branch" ]; then
                     task_branch="$GIT_MUX_BRANCH_PREFIX/$task_branch"
                     log "DEBUG" "task > added prefix to the argument resulting in the branch name: $task_branch"
@@ -422,16 +445,18 @@ git_task() {
         log "DEBUG" "task > tmux window name: $task_name"
 
         # naively assumes a bare repo will be using worktrees
-        if [ "$(git rev-parse --is-bare-repository)" = "true" ]; then
+        if is_git_bare_repo_root; then
             log "DEBUG" "task > git > project is bare repo, using git-worktree"
+
             task_start_dir="$task_start_dir/$task_name"
             log "DEBUG" "task > git > worktree directory: $task_start_dir"
 
             if [ ! -d "$task_start_dir" ]; then
                 log "INFO " "task > git > the worktree for branch \"$task_branch\" does not exist, creating it now"
+
                 # shellcheck disable=2086
                 git worktree add $task_name $task_branch_flags $task_branch >&2
-                export GIT_MUX_NEW_WORKTREE="1"
+                GIT_MUX_NEW_WORKTREE="1"
             fi
         else
             log "WARN" "task > git > repo is not using worktrees, checking out branch instead: \"$task_branch\""
@@ -444,26 +469,6 @@ git_task() {
     fi
 
     unset task_start_dir task_name task_branch task_branch_flags
-}
-
-is_git_root_dir() {
-    git_dir="$(git rev-parse --path-format=relative --git-dir)"
-    # normal repos
-    [ "$git_dir" = ".git" ] ||
-        # bare repos
-        [ "$git_dir" = "." ] ||
-        # just for safsies
-        [ "$(git rev-parse --path-format=absolute --show-toplevel)" = "${1:-$(pwd)}" ]
-}
-
-# Use $GIT_MUX_SELECT_CMD to select an existing git branch for creating a task.
-select_branch() {
-    # remote and local branches sorted by commit date
-    git for-each-ref refs/remotes refs/heads \
-        --sort=-committerdate --format='%(refname:short)' |
-        # filter by string, remove 'origin/' prefix, dedupe, select branch
-        awk '/'"$GIT_MUX_BRANCH_FILTER"'/{gsub("^origin/(HEAD)?","")};!x[$0]++' |
-        $GIT_MUX_SELECT_CMD
 }
 
 # --------------------------------------------------------------------- }}}
