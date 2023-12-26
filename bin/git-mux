@@ -120,9 +120,6 @@ config_values() {
 ========= @internal: all projects =========
 $GIT_MUX_ALL_PROJECTS
 
-========= @internal: tmux session name =========
-$GIT_MUX_TMUX_SESSION
-
 ========= GIT_MUX_PROJECT_PARENTS =========
 $GIT_MUX_PROJECT_PARENTS
 
@@ -243,7 +240,6 @@ tmux_create_if_needed_and_attach() {
     unset project_path project_name project_info
 }
 
-has_tmux_server && GIT_MUX_TMUX_SESSION="$(tmux display-message -p "#S")"
 
 # --------------------------------------------------------------------- }}}
 # Clone command                                                         {{{
@@ -347,6 +343,12 @@ handle_task() {
         error "invalid argument(s) for task command: \"$*\""
     fi
     log "DEBUG" "task > args: $*"
+
+    if ! has_tmux_server; then
+        error "tmux server not found. Make sure a project is open before selecting a task."
+    fi
+
+    GIT_MUX_TMUX_SESSION="$(tmux display-message -p "#S")"
 
     # Use arg1 for the task if it is a valid directory.
     # Otherwise assume it is a git branch name.
