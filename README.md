@@ -47,7 +47,8 @@ cd ~/.git-mux && make && sudo make install && cd - && rm -rf ~/.git-mux
 
 ## Usage
 
-See `man git-mux` in the terminal, or the [markdown version](./docs/MANUAL.md) in the browser.
+See `man git-mux` in the terminal, or the [markdown version](./docs/MANUAL.md)
+in the browser.
 
 ## Tips
 
