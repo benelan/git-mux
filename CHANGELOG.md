@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.0](https://github.com/benelan/git-mux/compare/v0.1.0...v0.2.0) (2023-12-26)
+
+
+### Features
+
+* Add option to execute command(s) after creating a new tmux session ([47460b7](https://github.com/benelan/git-mux/commit/47460b738905971832e70c1e858c809bf7467823))
+* **clone, project, task:** Add support for long/short flag syntax ([be03324](https://github.com/benelan/git-mux/commit/be033240a7e2c7de6a443a41286fffcf76ff434c))
+* **task:** Better error message when a tmux server does not exist ([7a9bee3](https://github.com/benelan/git-mux/commit/7a9bee3670c9b1c8955eee0b84b58a41da00a7a6))
+
+
+### Bug Fixes
+
+* **project:** Start in the correct directory when a relative path is provided ([f6f8842](https://github.com/benelan/git-mux/commit/f6f88422d3434b1612116979c14c051a5aac8784))
+
 ## 0.1.0 (2023-11-28)
 
 ### Features
