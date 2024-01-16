@@ -1,0 +1,24 @@
+{
+  "*": {
+    "console": "make"
+  },
+  "bin/git-mux": {
+    "type": "main",
+    "alternate": "docs/git-mux.1.txt"
+  },
+  "docs/git-mux.1.txt": {
+    "type": "docs",
+    "alternate": "docs/MANUAL.md"
+  },
+  "docs/MANUAL.md": {
+    "type": "example",
+    "alternate": "README.md"
+  },
+  "README.md": {
+    "alternate": "bin/git-mux"
+  },
+  ".github/workflows/release.yml": {
+    "type": "ci",
+    "alternate": "bin/git-mux"
+  }
+}
