@@ -343,6 +343,11 @@ find_project_directory() {
 
 # Use $GIT_MUX_SELECT_CMD to select an existing git branch for creating a task.
 select_branch() {
+    # branches are ordered by commit date, so don't re-sort with fzf
+    if [ "$GIT_MUX_SELECT_CMD" = "fzf" ]; then
+        GIT_MUX_SELECT_CMD="fzf --no-sort"
+    fi
+
     # remote and local branches sorted by commit date
     git for-each-ref refs/remotes refs/heads \
         --sort=-committerdate --format='%(refname:short)' |
