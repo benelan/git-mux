@@ -63,6 +63,23 @@ in the browser.
 
 ## Tips
 
+You can add bash completion of git branch names to `git-mux`, which is useful
+for the `task` command.
+
+```sh
+# Load git completion so it can be applied to executables and aliases
+if ! declare -F __git_complete >/dev/null 2>&1; then
+    _completion_loader git >/dev/null 2>&1
+fi
+
+# only works for `git-mux task`, not `git mux task`
+__git_complete git-mux git_checkout
+
+# Or create an alias since only the task command needs git branch completion
+alias gxt="git mux task"
+__git_complete gxt git_checkout
+```
+
 I have the following keybindings in my `~/.tmux.conf` for blazingly fast
 navigation.
 
