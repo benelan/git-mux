@@ -85,16 +85,16 @@ navigation.
 
 ```sh
 %if #{>=:#{version},3.2}
-    bind C-p popup -E -E git mux project
-    bind C-t popup -E -E git mux task
+    bind C-p popup -E -E git-mux project
+    bind C-t popup -E -E git-mux task
 %else
-    bind C-p new-window -c "#{pane_current_path}" git mux project
-    bind C-t new-window -c "#{pane_current_path}" git mux task
+    bind C-p new-window -c "#{pane_current_path}" git-mux project
+    bind C-t new-window -c "#{pane_current_path}" git-mux task
 %endif
 
-bind C-h run "git mux project ~/dev/notes"
-bind C-x run "git mux project ~/dev/personal/git-mux"
-bind C-c run "git mux project ~/dev/work/acme-components"
+bind C-n run "git-mux project ~/dev/notes"
+bind C-x run "git-mux project ~/dev/personal/git-mux"
+bind C-c run "git-mux project ~/dev/work/acme-components"
 ```
 
 I also have the following in my `~/.bashrc`, which creates and/or attaches
