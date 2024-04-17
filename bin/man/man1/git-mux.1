@@ -12,7 +12,7 @@ between projects and tasks
 .PD 0
 .P
 .PD
-\f[B]git mux project\f[R] <directory>
+\f[B]git mux project\f[R] [<directory>]
 .PD 0
 .P
 .PD
@@ -26,55 +26,90 @@ between projects and tasks
 .PD
 \f[B]git mux help\f[R]
 .SH COMMANDS
-.TP
-\f[B]c\f[R], \f[B]clone\f[R]
+.SS clone
+.PP
 Clone and configure a bare \f[B]git\f[R](1) <repository> for use with
 worktrees.
-.TP
-\f[B]p\f[R], \f[B]project\f[R]
-Create or switch to a \f[I]project\f[R], which is a \f[B]tmux\f[R](1)
-session.
-Projects are also usually (but not required to be) a \f[B]git\f[R](1)
-repo.
-.TP
-\f[B]t\f[R], \f[B]task\f[R]
-Create, switch, or send commands to a \f[I]task\f[R], which is a
+.PP
+Aliases: \f[B]c\f[R], \f[B]-c\f[R], \f[B]--clone\f[R]
+.SS project
+.PP
+Create and/or switch to a \f[I]project\f[R], which is a
+\f[B]tmux\f[R](1) session.
+Projects are also usually a \f[B]git\f[R](1) repo, but they can be
+created for any directory.
+.PP
+Aliases: \f[B]p\f[R], \f[B]-p\f[R], \f[B]--project\f[R]
+.SS task
+.PP
+Create, switch, and/or send commands to a \f[I]task\f[R], which is a
 \f[B]tmux\f[R](1) window.
-Tasks are also usually (but not required to be) a
-\f[B]git-worktree\f[R](1) or \f[B]git-branch\f[R](1).
-.TP
-\f[B]h\f[R], \f[B]help\f[R]
-Print a concise help message to \f[B]stderr\f[R](3) or open the
-\f[B]git-mux\f[R] man page, respectively.
+Tasks are also usually a \f[B]git-worktree\f[R](1) or
+\f[B]git-branch\f[R](1), but can be created for any directory.
+.PP
+Aliases: \f[B]t\f[R], \f[B]-t\f[R], \f[B]--task\f[R]
+.SS help
+.PP
+Open the \f[B]git-mux\f[R] man page.
+Use \f[B]h\f[R] or \f[B]-h\f[R] to print a concise help message to
+\f[B]stderr\f[R](3) instead.
+.PP
+Aliases: \f[B]--help\f[R]
 .SH EXAMPLES
-.TP
-\f[B]git mux p\f[R]
+.PP
 Select a \f[I]project\f[R], then create and/or switch to its
 \f[B]tmux\f[R](1) session.
 Selects with \f[B]fzf\f[R](1) by default, but the command can be changed
 using \f[B]$GIT_MUX_SELECT_CMD\f[R].
 See the \f[I]ENVIRONMENT\f[R] section.
-.TP
-\f[B]git mux project \[ti]/projects/my-app\f[R]
+.IP
+.nf
+\f[C]
+git mux p
+\f[R]
+.fi
+.PP
 Directly create and/or switch to a \f[I]project\f[R] (useful for a
 keymap or alias).
-.TP
-\f[B]git mux task feature/123\f[R]
+.IP
+.nf
+\f[C]
+git mux project \[ti]/projects/my-app
+\f[R]
+.fi
+.PP
 Create and/or switch to a \f[B]tmux\f[R](1) <window> named \[dq]123\[dq]
 via \f[B]basename\f[R](1).
-Open the window at \[dq]feature/123\[dq] if it is a valid <directory>,
-otherwise assume it is a \f[B]git\f[R](1) <branch> name.
+If \[dq]feature/123\[dq] is a valid <directory>, the window will be
+opened at that location.
+Otherwise, assume it is a \f[B]git\f[R](1) <branch> name.
 Create and/or switch to the \f[B]git-worktree\f[R](1) if the
-\f[I]project\f[R] is a bare repo, otherwise checkout the
+\f[I]project\f[R] is a bare repo, otherwise create and/or checkout the
 \f[B]git-branch\f[R](1).
-.TP
-\f[B]git mux t\f[R]
+.IP
+.nf
+\f[C]
+git mux task feature/123
+\f[R]
+.fi
+.PP
 Select an existing \f[B]git-branch\f[R](1) for the \f[I]task\f[R].
-.TP
-\f[B]git mux task \[ti]/projects/my-app tests npm i && npm test\f[R]
+.IP
+.nf
+\f[C]
+git mux t
+\f[R]
+.fi
+.PP
 Install dependencies and run tests in a \f[B]tmux\f[R](1) <window> named
-\[dq]tests\[dq] without switching to it.
+\[dq]test_client\[dq] without switching to it.
 Specifying the <window> name is required when sending commands.
+.IP
+.nf
+\f[C]
+git mux task packages/client test_client npm i && npm test
+\f[R]
+.fi
 .SH ENVIRONMENT
 .PP
 \f[B]git-mux\f[R] can be configured with the following environment
@@ -83,39 +118,36 @@ Specifying the \f[I]project\f[R] directories with either
 \f[B]$GIT_MUX_PROJECTS\f[R] or \f[B]$GIT_MUX_PROJECT_PARENTS\f[R] is
 required, and setting both will combine their values.
 All other configuration is optional.
-.TP
-\f[B]GIT_MUX_PROJECTS\f[R]
+.SS GIT_MUX_PROJECTS
+.PP
 Space delimited list of individual \f[I]project\f[R] directories for
 selection.
 The paths must be absolute or start with \[dq]\[ti]\[dq] and cannot
 contain spaces.
-.RS
 .IP
 .nf
 \f[C]
 export GIT_MUX_PROJECTS=\[dq]\[ti]/notes \[ti]/.config/nvim\[dq]
 \f[R]
 .fi
-.RE
-.TP
-\f[B]GIT_MUX_PROJECT_PARENTS\f[R]
+.SS GIT_MUX_PROJECT_PARENTS
+.PP
 Space delimited list of directories that contain projects, defaults to
 \f[B]$PROJECTS\f[R] if set.
 The immediate child directories (depth=1) of each parent are used for
 selection.
 The paths must be absolute or start with \[dq]\[ti]\[dq] and cannot
 contain spaces.
-.RS
 .IP
 .nf
 \f[C]
 export GIT_MUX_PROJECT_PARENTS=\[dq]\[ti]/dev/work \[ti]/dev/personal\[dq]
 \f[R]
 .fi
-.RE
 .PP
-In the two examples above, the resulting \f[I]project\f[R] list used for
-selection would be:
+In the \f[B]$GIT_MUX_PROJECTS\f[R] and
+\f[B]$GIT_MUX_PROJECT_PARENTS\f[R] examples above, the resulting
+\f[I]project\f[R] list used for selection would be:
 .IP
 .nf
 \f[C]
@@ -152,30 +184,27 @@ Assuming the following file structure:
 \[br]  \[br]  \[br]  \[u251C]\[u2500] spaghetti.jsx
 \f[R]
 .fi
-.TP
-\f[B]GIT_MUX_SELECT_CMD\f[R]
+.SS GIT_MUX_SELECT_CMD
+.PP
 Command used to select a \f[I]project\f[R] or \f[I]task\f[R].
 Defaults to \f[B]fzf\f[R](1).
 This can be any command that receives the directory list from
-\f[B]stdin\f[R](3) and sends a single, selected directory to
+\f[B]stdin\f[R](3) and prints a single, selected directory to
 \f[B]stdout\f[R](3).
-.RS
 .PP
-For example, to use \f[B]dialog\f[R](1), create the following script
-somewhere on your \f[B]$PATH\f[R] (e.g.,
-\f[I]\[ti]/.local/bin/_git-mux-select\f[R]):
+For example, create the following script somewhere on your
+\f[B]$PATH\f[R] (e.g., \f[I]\[ti]/.local/bin/_git-mux-select\f[R]), to
+use \f[B]dialog\f[R](1) for selection:
 .IP
 .nf
 \f[C]
 #!/usr/bin/env sh
-# shellcheck disable=2086,2069
 stdin=$(cat)
-dialog --no-items --erase-on-exit --menu \[rs]
-    \[dq]GIT MUX\[dq] 0 0 0 $stdin 2>&1 >/dev/tty
+dialog --no-items --erase-on-exit --menu \[dq]GIT MUX\[dq] 0 0 0 $stdin 2>&1 >/dev/tty
 \f[R]
 .fi
 .PP
-Then add the following to your shell\[aq]s startup scripts (e.g.,
+Then add the following to your shell startup scripts (e.g.,
 \f[I]\[ti]/.bashrc\f[R]):
 .IP
 .nf
@@ -183,35 +212,32 @@ Then add the following to your shell\[aq]s startup scripts (e.g.,
 export GIT_MUX_SELECT_CMD=\[dq]_git-mux-select\[dq]
 \f[R]
 .fi
-.RE
-.TP
-\f[B]GIT_MUX_BRANCH_PREFIX\f[R]
+.SS GIT_MUX_BRANCH_PREFIX
+.PP
 A <prefix> string to prepend to the name of new branches created via the
 \f[I]task\f[R] command.
 When set, the resulting \f[B]git-branch\f[R](1) name is
 \[dq]<prefix>/<branch>\[dq].
 This option is ignored if the <branch> name provided to \f[I]task\f[R]
 already contains a \[dq]/\[dq].
-.RS
 .PP
 For example, the following would create a \f[B]git-branch\f[R](1) named
-\[dq]<username>/fix-bug\[dq]:
+\[dq]JohnDoe/fix-123\[dq] if your GitHub username (system user as
+backup) is \[dq]JohnDoe\[dq]:
 .IP
 .nf
 \f[C]
 export GIT_MUX_BRANCH_PREFIX=\[dq]$(git config --global github.user || id -un)\[dq]
-git mux task fix-bug
+git mux task fix-123
 \f[R]
 .fi
-.RE
-.TP
-\f[B]GIT_MUX_NEW_WORKTREE_CMD\f[R]
+.SS GIT_MUX_NEW_WORKTREE_CMD
+.PP
 Command(s) to execute in the \f[B]tmux\f[R](1) window when a new
 \f[B]git-worktree\f[R](1) is created via the \f[I]task\f[R] command.
 Unset by default.
 You can assume that \f[B]$PWD\f[R] is the root directory of the new
 worktree.
-.RS
 .PP
 For example, to install Node.js dependencies in new worktrees (when
 relevant):
@@ -225,15 +251,13 @@ export GIT_MUX_NEW_WORKTREE_CMD=\[aq][ -f \[dq]./package.json\[dq] ] && npm i\[a
 Creating a script somewhere on your \f[B]$PATH\f[R] for more complicated
 commands is recommended.
 See \f[B]$GIT_MUX_SELECT_CMD\f[R] above for an example.
-.RE
-.TP
-\f[B]GIT_MUX_NEW_SESSION_CMD\f[R]
+.SS GIT_MUX_NEW_SESSION_CMD
+.PP
 Command(s) to execute when a new \f[B]tmux\f[R](1) session is created
 via the \f[B]project\f[R] command.
 Unset by default.
 You can assume that \f[B]$PWD\f[R] is the root directory of the
 specified project.
-.RS
 .PP
 For example, to rename the \f[B]tmux\f[R](1) window to
 \[dq]scratch\[dq]:
@@ -247,23 +271,17 @@ export GIT_MUX_NEW_SESSION_CMD=\[aq]tmux rename-window scratch\[aq]
 Creating a script somewhere on your \f[B]$PATH\f[R] for more complicated
 commands is recommended.
 See \f[B]$GIT_MUX_SELECT_CMD\f[R] above for an example.
-.RE
-.TP
-\f[B]GIT_MUX_LOGS\f[R]
+.SS GIT_MUX_LOGS
+.PP
 A path to the log file.
 Logs are disabled if set to \[dq]0\[dq] or unset, which is the default.
-.RS
-.PP
 If set to \[dq]1\[dq], the logs are saved to
 \f[I]${XDG_STATE_HOME:-$HOME/.local/state}/git-mux/logs\f[R].
-All values besides \[dq]1\[dq] and \[dq]0\[dq] are treated as a path.
-.RE
-.TP
-\f[B]GIT_MUX_LOG_LEVEL\f[R]
+.SS GIT_MUX_LOG_LEVEL
+.PP
 The minimum level of log entries to save, defaults to all levels if
 logging is enabled via \f[B]$GIT_MUX_LOGS\f[R].
 The log levels are:
-.RS
 .PP
 \f[I]DEBUG\f[R] < \f[I]INFO\f[R] < \f[I]WARN\f[R] < \f[I]ERROR\f[R]
 .PP
@@ -275,7 +293,6 @@ levels:
 export GIT_MUX_LOG_LEVEL=\[dq]WARN\[dq]
 \f[R]
 .fi
-.RE
 .SH BUGS
 .PP
 The following are known limitations of \f[B]git-mux\f[R]:
@@ -284,18 +301,16 @@ Project paths cannot contain spaces.
 .PP
 Try these troubleshooting tips if you are experiencing issues:
 .IP \[bu] 2
-Run \f[B]git mux config\f[R] to print the current configuration values
-and make sure they\[aq]re what you expect.
+Run \f[B]git mux config\f[R] to print the current config values and make
+sure they\[aq]re what you expect.
 .IP \[bu] 2
-Enable logs using the \f[B]$GIT_MUX_LOGS\f[R] configuration option and
-rerun the command that caused issues.
+Enable logs using the \f[B]$GIT_MUX_LOGS\f[R] config option and rerun
+the command that caused issues.
 See the \f[I]ENVIRONMENT\f[R] section for more info.
 .PP
 If none of the troubleshooting steps helped resolve the issue, please
 submit an issue on GitHub:
-.PD 0
-.P
-.PD
+.PP
 \f[I]https://github.com/benelan/git-mux/issues\f[R]
 .SH COMPATIBILITY
 .PP

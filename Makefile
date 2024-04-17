@@ -24,11 +24,12 @@ uninstall:
 
 doc: docs/$(PROGRAM).1.txt
 	mkdir -p bin/$(MANDIR)
-	pandoc --standalone --from markdown-smart --to man $< --output bin/$(MANDIR)/$(PROGRAM).1
+	pandoc --standalone --from markdown-smart --to man --output bin/$(MANDIR)/$(PROGRAM).1 $<
 	pandoc --from markdown-smart --to gfm $< --output docs/MANUAL.md
 	sed -i 's%\*\$$%*\\$$%g' docs/MANUAL.md
 	sed -i 's%\*\(ENVIRONMENT\)\*%[\1](#environment)%g' docs/MANUAL.md
 	sed -i 's%^#%##%g' docs/MANUAL.md
+	sed -i -e '1i # MANUAL\n' docs/MANUAL.md
 	sed -i 's%\("User Manual"\)%\1 \\" x-release-please-version%' bin/$(MANDIR)/$(PROGRAM).1
 
 # https://github.com/prettier/prettier

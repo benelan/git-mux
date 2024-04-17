@@ -1,3 +1,5 @@
+# MANUAL
+
 ## NAME
 
 **git-mux** - a git + tmux lovechild for blazingly fast movement between
@@ -6,50 +8,84 @@ projects and tasks
 ## SYNOPSIS
 
 **git mux clone** \<repository\>  
-**git mux project** \<directory\>  
+**git mux project** \[\<directory\>\]  
 **git mux task** \[\<branch\>\] \[\<window\>\]  
 **git mux task** \<directory\> \[\<window\>\] \[\<command\>...\]  
 **git mux help**
 
 ## COMMANDS
 
-- **c**, **clone**  
-  Clone and configure a bare **git**(1) \<repository\> for use with
-  worktrees.
-- **p**, **project**  
-  Create or switch to a _project_, which is a **tmux**(1) session.
-  Projects are also usually (but not required to be) a **git**(1)
-  repo.
-- **t**, **task**  
-  Create, switch, or send commands to a _task_, which is a **tmux**(1)
-  window. Tasks are also usually (but not required to be) a
-  **git-worktree**(1) or **git-branch**(1).
-- **h**, **help**  
-  Print a concise help message to **stderr**(3) or open the
-  **git-mux** man page, respectively.
+### clone
+
+Clone and configure a bare **git**(1) \<repository\> for use with
+worktrees.
+
+Aliases: **c**, **-c**, **--clone**
+
+### project
+
+Create and/or switch to a _project_, which is a **tmux**(1) session.
+Projects are also usually a **git**(1) repo, but they can be created for
+any directory.
+
+Aliases: **p**, **-p**, **--project**
+
+### task
+
+Create, switch, and/or send commands to a _task_, which is a **tmux**(1)
+window. Tasks are also usually a **git-worktree**(1) or
+**git-branch**(1), but can be created for any directory.
+
+Aliases: **t**, **-t**, **--task**
+
+### help
+
+Open the **git-mux** man page. Use **h** or **-h** to print a concise
+help message to **stderr**(3) instead.
+
+Aliases: **--help**
 
 ## EXAMPLES
 
-- **git mux p**  
-  Select a _project_, then create and/or switch to its **tmux**(1)
-  session. Selects with **fzf**(1) by default, but the command can be
-  changed using **\$GIT_MUX_SELECT_CMD**. See the [ENVIRONMENT](#environment)
-  section.
-- **git mux project \~/projects/my-app**  
-  Directly create and/or switch to a _project_ (useful for a keymap or
-  alias).
-- **git mux task feature/123**  
-  Create and/or switch to a **tmux**(1) \<window\> named "123" via
-  **basename**(1). Open the window at "feature/123" if it is a valid
-  \<directory\>, otherwise assume it is a **git**(1) \<branch\> name.
-  Create and/or switch to the **git-worktree**(1) if the _project_ is
-  a bare repo, otherwise checkout the **git-branch**(1).
-- **git mux t**  
-  Select an existing **git-branch**(1) for the _task_.
-- **git mux task \~/projects/my-app tests npm i && npm test**  
-  Install dependencies and run tests in a **tmux**(1) \<window\> named
-  "tests" without switching to it. Specifying the \<window\> name is
-  required when sending commands.
+Select a _project_, then create and/or switch to its **tmux**(1)
+session. Selects with **fzf**(1) by default, but the command can be
+changed using **\$GIT_MUX_SELECT_CMD**. See the [ENVIRONMENT](#environment) section.
+
+```sh
+git mux p
+```
+
+Directly create and/or switch to a _project_ (useful for a keymap or
+alias).
+
+```sh
+git mux project ~/projects/my-app
+```
+
+Create and/or switch to a **tmux**(1) \<window\> named "123" via
+**basename**(1). If "feature/123" is a valid \<directory\>, the window
+will be opened at that location. Otherwise, assume it is a **git**(1)
+\<branch\> name. Create and/or switch to the **git-worktree**(1) if the
+_project_ is a bare repo, otherwise create and/or checkout the
+**git-branch**(1).
+
+```sh
+git mux task feature/123
+```
+
+Select an existing **git-branch**(1) for the _task_.
+
+```sh
+git mux t
+```
+
+Install dependencies and run tests in a **tmux**(1) \<window\> named
+"test_client" without switching to it. Specifying the \<window\> name
+is required when sending commands.
+
+```sh
+git mux task packages/client test_client npm i && npm test
+```
 
 ## ENVIRONMENT
 
@@ -58,27 +94,29 @@ Specifying the _project_ directories with either **\$GIT_MUX_PROJECTS**
 or **\$GIT_MUX_PROJECT_PARENTS** is required, and setting both will
 combine their values. All other configuration is optional.
 
-- **GIT_MUX_PROJECTS**  
-  Space delimited list of individual _project_ directories for
-  selection. The paths must be absolute or start with "\~" and cannot
-  contain spaces.
+### GIT_MUX_PROJECTS
 
-  ```sh
-  export GIT_MUX_PROJECTS="~/notes ~/.config/nvim"
-  ```
+Space delimited list of individual _project_ directories for selection.
+The paths must be absolute or start with "\~" and cannot contain spaces.
 
-- **GIT_MUX_PROJECT_PARENTS**  
-  Space delimited list of directories that contain projects, defaults
-  to **\$PROJECTS** if set. The immediate child directories (depth=1)
-  of each parent are used for selection. The paths must be absolute or
-  start with "\~" and cannot contain spaces.
+```sh
+export GIT_MUX_PROJECTS="~/notes ~/.config/nvim"
+```
 
-  ```sh
-  export GIT_MUX_PROJECT_PARENTS="~/dev/work ~/dev/personal"
-  ```
+### GIT_MUX_PROJECT_PARENTS
 
-In the two examples above, the resulting _project_ list used for
-selection would be:
+Space delimited list of directories that contain projects, defaults to
+**\$PROJECTS** if set. The immediate child directories (depth=1) of each
+parent are used for selection. The paths must be absolute or start with
+"\~" and cannot contain spaces.
+
+```sh
+export GIT_MUX_PROJECT_PARENTS="~/dev/work ~/dev/personal"
+```
+
+In the **\$GIT_MUX_PROJECTS** and **\$GIT_MUX_PROJECT_PARENTS**
+examples above, the resulting _project_ list used for selection would
+be:
 
 ```text
 ~/notes
@@ -112,96 +150,96 @@ Assuming the following file structure:
 │  │  │  ├─ spaghetti.jsx
 ```
 
-- **GIT_MUX_SELECT_CMD**  
-  Command used to select a _project_ or _task_. Defaults to
-  **fzf**(1). This can be any command that receives the directory list
-  from **stdin**(3) and sends a single, selected directory to
-  **stdout**(3).
+### GIT_MUX_SELECT_CMD
 
-  For example, to use **dialog**(1), create the following script
-  somewhere on your **\$PATH** (e.g.,
-  _\~/.local/bin/\_git-mux-select_):
+Command used to select a _project_ or _task_. Defaults to **fzf**(1).
+This can be any command that receives the directory list from
+**stdin**(3) and prints a single, selected directory to **stdout**(3).
 
-  ```sh
-  #!/usr/bin/env sh
-  # shellcheck disable=2086,2069
-  stdin=$(cat)
-  dialog --no-items --erase-on-exit --menu \
-      "GIT MUX" 0 0 0 $stdin 2>&1 >/dev/tty
-  ```
+For example, create the following script somewhere on your **\$PATH**
+(e.g., _\~/.local/bin/\_git-mux-select_), to use **dialog**(1) for
+selection:
 
-  Then add the following to your shell's startup scripts (e.g.,
-  _\~/.bashrc_):
+```sh
+##!/usr/bin/env sh
+stdin=$(cat)
+dialog --no-items --erase-on-exit --menu "GIT MUX" 0 0 0 $stdin 2>&1 >/dev/tty
+```
 
-  ```sh
-  export GIT_MUX_SELECT_CMD="_git-mux-select"
-  ```
+Then add the following to your shell startup scripts (e.g.,
+_\~/.bashrc_):
 
-- **GIT_MUX_BRANCH_PREFIX**  
-  A \<prefix\> string to prepend to the name of new branches created
-  via the _task_ command. When set, the resulting **git-branch**(1)
-  name is "\<prefix\>/\<branch\>". This option is ignored if the
-  \<branch\> name provided to _task_ already contains a "/".
+```sh
+export GIT_MUX_SELECT_CMD="_git-mux-select"
+```
 
-  For example, the following would create a **git-branch**(1) named
-  "\<username\>/fix-bug":
+### GIT_MUX_BRANCH_PREFIX
 
-  ```sh
-  export GIT_MUX_BRANCH_PREFIX="$(git config --global github.user || id -un)"
-  git mux task fix-bug
-  ```
+A \<prefix\> string to prepend to the name of new branches created via
+the _task_ command. When set, the resulting **git-branch**(1) name is
+"\<prefix\>/\<branch\>". This option is ignored if the \<branch\> name
+provided to _task_ already contains a "/".
 
-- **GIT_MUX_NEW_WORKTREE_CMD**  
-  Command(s) to execute in the **tmux**(1) window when a new
-  **git-worktree**(1) is created via the _task_ command. Unset by
-  default. You can assume that **\$PWD** is the root directory of the
-  new worktree.
+For example, the following would create a **git-branch**(1) named
+"JohnDoe/fix-123" if your GitHub username (system user as backup) is
+"JohnDoe":
 
-  For example, to install Node.js dependencies in new worktrees (when
-  relevant):
+```sh
+export GIT_MUX_BRANCH_PREFIX="$(git config --global github.user || id -un)"
+git mux task fix-123
+```
 
-  ```sh
-  export GIT_MUX_NEW_WORKTREE_CMD='[ -f "./package.json" ] && npm i'
-  ```
+### GIT_MUX_NEW_WORKTREE_CMD
 
-  Creating a script somewhere on your **\$PATH** for more complicated
-  commands is recommended. See **\$GIT_MUX_SELECT_CMD** above for an
-  example.
+Command(s) to execute in the **tmux**(1) window when a new
+**git-worktree**(1) is created via the _task_ command. Unset by default.
+You can assume that **\$PWD** is the root directory of the new worktree.
 
-- **GIT_MUX_NEW_SESSION_CMD**  
-  Command(s) to execute when a new **tmux**(1) session is created via
-  the **project** command. Unset by default. You can assume that
-  **\$PWD** is the root directory of the specified project.
+For example, to install Node.js dependencies in new worktrees (when
+relevant):
 
-  For example, to rename the **tmux**(1) window to "scratch":
+```sh
+export GIT_MUX_NEW_WORKTREE_CMD='[ -f "./package.json" ] && npm i'
+```
 
-  ```sh
-  export GIT_MUX_NEW_SESSION_CMD='tmux rename-window scratch'
-  ```
+Creating a script somewhere on your **\$PATH** for more complicated
+commands is recommended. See **\$GIT_MUX_SELECT_CMD** above for an
+example.
 
-  Creating a script somewhere on your **\$PATH** for more complicated
-  commands is recommended. See **\$GIT_MUX_SELECT_CMD** above for an
-  example.
+### GIT_MUX_NEW_SESSION_CMD
 
-- **GIT_MUX_LOGS**  
-  A path to the log file. Logs are disabled if set to "0" or unset,
-  which is the default.
+Command(s) to execute when a new **tmux**(1) session is created via the
+**project** command. Unset by default. You can assume that **\$PWD** is
+the root directory of the specified project.
 
-  If set to "1", the logs are saved to
-  _\${XDG_STATE_HOME:-$HOME/.local/state}/git-mux/logs_. All values
-  besides "1" and "0" are treated as a path.
+For example, to rename the **tmux**(1) window to "scratch":
 
-- **GIT_MUX_LOG_LEVEL**  
-  The minimum level of log entries to save, defaults to all levels if
-  logging is enabled via **\$GIT_MUX_LOGS**. The log levels are:
+```sh
+export GIT_MUX_NEW_SESSION_CMD='tmux rename-window scratch'
+```
 
-  _DEBUG_ \< _INFO_ \< _WARN_ \< _ERROR_
+Creating a script somewhere on your **\$PATH** for more complicated
+commands is recommended. See **\$GIT_MUX_SELECT_CMD** above for an
+example.
 
-  For example, to save log entries with _ERROR_ and _WARN_ levels:
+### GIT_MUX_LOGS
 
-  ```sh
-  export GIT_MUX_LOG_LEVEL="WARN"
-  ```
+A path to the log file. Logs are disabled if set to "0" or unset, which
+is the default. If set to "1", the logs are saved to
+_\${XDG_STATE_HOME:-$HOME/.local/state}/git-mux/logs_.
+
+### GIT_MUX_LOG_LEVEL
+
+The minimum level of log entries to save, defaults to all levels if
+logging is enabled via **\$GIT_MUX_LOGS**. The log levels are:
+
+_DEBUG_ \< _INFO_ \< _WARN_ \< _ERROR_
+
+For example, to save log entries with _ERROR_ and _WARN_ levels:
+
+```sh
+export GIT_MUX_LOG_LEVEL="WARN"
+```
 
 ## BUGS
 
@@ -211,15 +249,16 @@ The following are known limitations of **git-mux**:
 
 Try these troubleshooting tips if you are experiencing issues:
 
-- Run **git mux config** to print the current configuration values and
-  make sure they're what you expect.
+- Run **git mux config** to print the current config values and make
+  sure they're what you expect.
 
-- Enable logs using the **\$GIT_MUX_LOGS** configuration option and
-  rerun the command that caused issues. See the [ENVIRONMENT](#environment) section
-  for more info.
+- Enable logs using the **\$GIT_MUX_LOGS** config option and rerun
+  the command that caused issues. See the [ENVIRONMENT](#environment) section for
+  more info.
 
 If none of the troubleshooting steps helped resolve the issue, please
-submit an issue on GitHub:  
+submit an issue on GitHub:
+
 *<https://github.com/benelan/git-mux/issues>*
 
 ## COMPATIBILITY
