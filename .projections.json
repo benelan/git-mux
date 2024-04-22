@@ -15,7 +15,11 @@
     "alternate": "README.md"
   },
   "README.md": {
-    "alternate": "bin/git-mux"
+    "alternate": "Makefile"
+  },
+  "Makefile": {
+    "type": "run",
+    "alternate": ".github/workflows/release.yml"
   },
   ".github/workflows/release.yml": {
     "type": "ci",

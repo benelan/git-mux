@@ -1,36 +1,45 @@
-PROGRAM ?= git-mux
+PROGRAM = git-mux
+
+# variables for installation directories, see:
+# https://www.gnu.org/software/make/manual/html_node/Directory-Variables.html
 PREFIX ?= /usr
-DOCPREFIX ?= $(PREFIX)/share/doc/$(PROGRAM)
-MANDIR ?= man/man1
+BINDIR ?= $(PREFIX)/bin
+DATAROOTDIR ?= $(PREFIX)/share
+DOCDIR ?= $(DATAROOTDIR)/doc/$(PROGRAM)
+MANDIR ?= $(DATAROOTDIR)/man
+MAN1DIR ?= $(MANDIR)/man1
+
+# variables for local project files
+BINFILE = bin/$(PROGRAM)
+MANFILE = bin/man/man1/$(PROGRAM).1
+DOCFILE = docs/MANUAL.md
 
 all: doc format lint
 	printf "\nRun 'sudo make install' to install $(PROGRAM).\n"
 
-install:
-	mkdir -p $(DESTDIR)$(PREFIX)/bin
-	mkdir -p $(DESTDIR)$(PREFIX)/share/$(MANDIR)
-	mkdir -p $(DESTDIR)$(DOCPREFIX)
-	cp -p bin/$(PROGRAM) $(DESTDIR)$(PREFIX)/bin
-	cp -p bin/$(MANDIR)/$(PROGRAM).1 $(DESTDIR)$(PREFIX)/share/$(MANDIR)
-	cp -p README.md $(DESTDIR)$(DOCPREFIX)
-	cp -p docs/MANUAL.md $(DESTDIR)$(DOCPREFIX)
-	chmod 755 $(DESTDIR)$(PREFIX)/bin/$(PROGRAM)
+install: $(BINFILE) $(MANFILE)
+	mkdir -p $(DESTDIR)$(BINDIR) $(DESTDIR)$(MAN1DIR) $(DESTDIR)$(DOCDIR)
+	cp -p $(BINFILE) $(DESTDIR)$(BINDIR)
+	cp -p $(MANFILE) $(DESTDIR)$(MAN1DIR)
+	cp -p $(DOCFILE) $(DESTDIR)$(DOCDIR)
+	cp -p README.md $(DESTDIR)$(DOCDIR)
+	chmod 755 $(DESTDIR)$(BINDIR)/$(PROGRAM)
 	printf "\nInstall successful. Run 'sudo make uninstall' to uninstall $(PROGRAM).\n"
 
 uninstall:
-	rm -f $(DESTDIR)$(PREFIX)/bin/$(PROGRAM)
-	rm -f $(DESTDIR)$(PREFIX)/share/$(MANDIR)/$(PROGRAM).1
-	rm -rf $(DESTDIR)$(DOCPREFIX)
+	rm -f $(DESTDIR)$(BINDIR)/$(PROGRAM)
+	rm -f $(DESTDIR)$(MAN1DIR)/$(PROGRAM).1
+	rm -rf $(DESTDIR)$(DOCDIR)
 
 doc: docs/$(PROGRAM).1.txt
-	mkdir -p bin/$(MANDIR)
-	pandoc --standalone --from markdown-smart --to man --output bin/$(MANDIR)/$(PROGRAM).1 $<
-	pandoc --from markdown-smart --to gfm $< --output docs/MANUAL.md
-	sed -i 's%\*\$$%*\\$$%g' docs/MANUAL.md
-	sed -i 's%\*\(ENVIRONMENT\)\*%[\1](#environment)%g' docs/MANUAL.md
-	sed -i 's%^#%##%g' docs/MANUAL.md
-	sed -i -e '1i # MANUAL\n' docs/MANUAL.md
-	sed -i 's%\("User Manual"\)%\1 \\" x-release-please-version%' bin/$(MANDIR)/$(PROGRAM).1
+	mkdir -p bin/man/man1
+	pandoc --standalone --from markdown-smart --to man --output $(MANFILE) $<
+	pandoc --standalone --from markdown-smart --to gfm --output $(DOCFILE) $<
+	sed -i 's%\*\$$%*\\$$%g' $(DOCFILE)
+	sed -i 's%\*\(ENVIRONMENT\)\*%[\1](#environment)%g' $(DOCFILE)
+	sed -i 's%^#%##%g' $(DOCFILE)
+	sed -i -e '1i # MANUAL\n' $(DOCFILE)
+	sed -i 's%\("User Manual"\)%\1 \\" x-release-please-version%' $(MANFILE)
 
 # https://github.com/prettier/prettier
 # https://github.com/mvdan/sh
@@ -40,20 +49,18 @@ format:
 	command -v prettier >/dev/null 2>&1 && \
 		prettier --write --log-level warn {README,CONTRIBUTING,{docs,.github}/**/*}.{md,yml}
 	command -v shfmt >/dev/null 2>&1 && \
-		shfmt --posix --indent 4 --case-indent --write bin/$(PROGRAM)
+		shfmt --posix --indent 4 --case-indent --write $(BINFILE)
 	 command -v shellcheck >/dev/null 2>&1 && \
-		shellcheck --format=diff bin/$(PROGRAM) | git apply --allow-empty
+		shellcheck --format=diff $(BINFILE) | git apply --allow-empty
 	command -v markdownlint >/dev/null 2>&1 && \
 		markdownlint . --ignore CHANGELOG.md --fix >/dev/null 2>&1 || true
 
 lint:
-	command -v shellcheck >/dev/null 2>&1 && \
-		shellcheck bin/$(PROGRAM)
-	command -v markdownlint >/dev/null 2>&1 && \
-		markdownlint . --ignore CHANGELOG.md --disable first-line-heading
+	command -v shellcheck >/dev/null 2>&1 && shellcheck $(BINFILE)
+	command -v markdownlint >/dev/null 2>&1 && markdownlint . --ignore CHANGELOG.md
 
+# https://github.com/conventional-changelog/conventional-changelog
 changelog:
-	# https://github.com/conventional-changelog/conventional-changelog
 	conventional-changelog --preset conventionalcommits --infile CHANGELOG.md --same-file
 
-.PHONY: all install uninstall lint format changelog
+.PHONY: all install uninstall doc lint format changelog
