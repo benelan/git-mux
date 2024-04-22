@@ -56,7 +56,7 @@ usage="Usage:
 error() {
     if [ -n "$1" ]; then
         log "ERROR" "$*"
-        printf "Error: %s\n" "$*"
+        printf "Error: %s\n" "$*" >&2
     fi
     printf "\n%s\n\n%s\n" \
         "$usage" \
@@ -116,7 +116,7 @@ Examples:
 
 # @internal
 config_values() {
-    cat <<EOF
+    cat >&2 <<EOF
 ========= @internal: all projects =========
 $GIT_MUX_ALL_PROJECTS
 
