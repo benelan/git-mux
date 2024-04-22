@@ -11,49 +11,65 @@ occurs on the `master` branch, which you can think of as `nightly`. See the
 [changelog](./CHANGELOG.md) for details about features and fixes released in
 each version.
 
-Use one of the following methods to instal `git-mux`.
+Use one of the following methods to install `git-mux`.
 
 ### `curl`
 
-The easiest way to install `git-mux` is by using `curl` or `wget` to download
+The **recommended** way to install `git-mux` is by using `curl` or `wget` to download
 the executable and `man` page to somewhere on your `$PATH`. For example, with
 `curl`:
 
 ```sh
-mkdir -p ~/.local/share/man/man1
+mkdir -p ~/.local/bin ~/.local/share/man/man1
 curl -Lo ~/.local/share/man/man1/git-mux.1 \
     https://raw.githubusercontent.com/benelan/git-mux/stable/bin/man/man1/git-mux.1
 curl -Lo ~/.local/bin/git-mux \
     https://raw.githubusercontent.com/benelan/git-mux/stable/bin/git-mux
 chmod +x ~/.local/bin/git-mux
+```
 
-# To uninstall:
-# $ rm -rf ~/.local/bin/git-mux ~/.local/share/man/man1/git-mux.1
+To uninstall:
+
+```sh
+rm -f ~/.local/bin/git-mux ~/.local/share/man/man1/git-mux.1
 ```
 
 ### `git clone`
 
 Another option is to clone the repo and add the `bin` directory to your `$PATH`.
-This allows you to easily update the script with a single command (`git -C
-~/.git-mux pull`). For example, bash users can run the following:
+This allows you to easily update the script with a single command (e.g.,
+`git -C ~/.git-mux pull`). For example, bash users can run the following:
 
 ```sh
 git clone -b stable https://github.com/benelan/git-mux.git ~/.git-mux
 echo 'export PATH="$PATH:~/.git-mux/bin"' >> ~/.bashrc && bash -l
-
-# To uninstall, remove ~/.git-mux and the PATH addition line in ~/.bashrc
 ```
 
-### `make`
+To uninstall, remove `~/.git-mux` and the `PATH` addition line in `~/.bashrc`.
 
-To install `git-mux` for all users on a machine:
+An alternative to the `PATH` addition is using `make install` after cloning the
+repo:
 
 ```sh
-git clone -b stable https://github.com/benelan/git-mux.git ~/.git-mux
-pushd ~/.git-mux && make && sudo make install && popd
+pushd ~/.git-mux && sudo make install && popd
+```
 
-# You can remove ~/.git-mux after installing with this method. To uninstall:
-# $ pushd ~/.git-mux && sudo make uninstall && popd && rm -rf ~/.git-mux
+You can remove `~/.git-mux` after installing with this method, since the
+necessary files will be copied to system directories.
+
+The above command will install `git-mux` for all users on the system. If you
+don't have `sudo` privileges or only want to install for the current user, you
+can specify the installation directory's `PREFIX`:
+
+```sh
+make install PREFIX=~/.local
+```
+
+When uninstalling, make sure to specify the `PREFIX` if you changed it during
+installation:
+
+```sh
+pushd ~/.git-mux && make uninstall PREFIX=~/.local && popd && rm -rf ~/.git-mux
 ```
 
 ## Usage
@@ -101,6 +117,5 @@ I also have the following in my `~/.bashrc`, which creates and/or attaches
 to a tmux session on startup.
 
 ```sh
-# ensure tmux is running
 [ -z "$TMUX" ] && command -v git-mux >/dev/null 2>&1 && git-mux project "$PWD"
 ```
