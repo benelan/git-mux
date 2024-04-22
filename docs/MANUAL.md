@@ -7,7 +7,7 @@ projects and tasks
 
 ## SYNOPSIS
 
-**git mux clone** \<repository\>  
+**git mux clone** \<repository\> \[\<directory\>\]  
 **git mux project** \[\<directory\>\]  
 **git mux task** \[\<branch\>\] \[\<window\>\]  
 **git mux task** \<directory\> \[\<window\>\] \[\<command\>...\]  

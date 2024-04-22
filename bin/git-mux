@@ -24,9 +24,9 @@ if [ -z "$GIT_MUX_PROJECTS" ] && [ -z "$GIT_MUX_PROJECT_PARENTS" ]; then
     exit 1
 fi
 
-# The following mess is a compliant solution to:
-# find $GIT_MUX_PROJECT_PARENTS -maxdepth 1 -mindepth 1 -type d
 GIT_MUX_ALL_PROJECTS="${GIT_MUX_PROJECTS} $(
+    # The following mess is a compliant solution to:
+    # find $GIT_MUX_PROJECT_PARENTS -maxdepth 1 -mindepth 1 -type d
     for project_parent_dir in ${GIT_MUX_PROJECT_PARENTS:-$PROJECTS}; do
         for project_dir in "$project_parent_dir"/*; do
             if [ -d "$project_dir" ]; then
@@ -48,7 +48,7 @@ GIT_MUX_VERSION="0.2.0" # x-release-please-version
 # --------------------------------------------------------------------- {|}
 
 usage="Usage:
-  git mux clone <repository>
+  git mux clone <repository> [<directory>]
   git mux project [<directory>]
   git mux task [<branch>] [<window>]
   git mux task <directory> [<window>] [<command>...]"
