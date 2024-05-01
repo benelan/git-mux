@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0](https://github.com/benelan/git-mux/compare/v0.2.0...v0.3.0) (2024-05-01)
+
+
+### Features
+
+* **task:** Sort by commit date during fzf search ([781eb73](https://github.com/benelan/git-mux/commit/781eb73468039ee10adb0ae59592d7a43b39b85d))
+
+
+### Bug Fixes
+
+* Leading slash in new branch names when PREFIX option unset ([c60989f](https://github.com/benelan/git-mux/commit/c60989f5b82a32f6480e7d0f2d529188b378fa6a))
+* Send all messages to stderr ([a161cf6](https://github.com/benelan/git-mux/commit/a161cf68e947ed6bf639425eebd84c40dfb8ced0))
+
 ## [0.2.0](https://github.com/benelan/git-mux/compare/v0.1.0...v0.2.0) (2023-12-26)
 
 
