@@ -461,7 +461,8 @@ handle_git_task() {
                 log "DEBUG" "task > git > branch not found and will be created"
                 task_branch_flags="-b"
 
-                if [ "${task_branch#*"/"}" = "$task_branch" ]; then
+                # add the prifix if the new branch name doesn't already contain a '/'
+                if [ -n "$GIT_MUX_BRANCH_PREFIX" ] && [ "${task_branch#*"/"}" = "$task_branch" ]; then
                     task_branch="$GIT_MUX_BRANCH_PREFIX/$task_branch"
                     log "DEBUG" "task > added prefix to the argument resulting in the branch name: $task_branch"
                 fi
