@@ -226,14 +226,6 @@ absolute_path() { [ -d "$1" ] && cd "$1" && pwd; }
 
 sanitize_name() { basename "$1" | tr "./" "__"; }
 
-# 60% of the time, it works every time (requires 'origin' or 'upstream' remote)
-# shellcheck disable=2120
-default_branch() {
-    git -C "${1:-$(pwd)}" remote show "$(
-        git remote | grep -Eo "(upstream|origin)" | tail -1
-    )" | grep "HEAD branch" | cut -d" " -f5
-}
-
 is_git_work_tree_root() {
     [ "$(git -C "${1:-$(pwd)}" rev-parse --is-inside-work-tree)" = "true" ] &&
         [ "$(git -C "${1:-$(pwd)}" rev-parse --show-toplevel)" = "${1:-$(pwd)}" ]
@@ -278,12 +270,15 @@ bare_clone() {
     git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*" >&2
     git fetch origin >&2
 
-    new_branch="$(default_branch)"
-    log "INFO " "clone > creating worktree for default branch: $new_branch"
-    git worktree add "$(sanitize_name "$new_branch")" "$new_branch" >&2
+    new_worktree="$(git rev-parse --abbrev-ref HEAD)"
+    if [ -n "$new_worktree" ]; then
+        log "INFO " "clone > creating worktree for HEAD branch: $new_worktree"
+        git worktree add "$(sanitize_name "$new_worktree")" "$new_worktree" >&2
 
-    cd "$new_branch" || return
-    unset new_repo_dir new_branch
+        cd "$new_worktree" || return
+    fi
+
+    unset new_repo_dir new_worktree
 }
 
 # --------------------------------------------------------------------- }}}
