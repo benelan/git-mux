@@ -222,23 +222,23 @@ log() {
 
 arg_is_flag() { case $1 in -*) true ;; *) false ;; esac }
 
-absolute_path() { [ -d "$1" ] && cd "$1" && pwd; }
+absolute_path() { [ -d "$1" ] && cd "$1" && echo "$PWD"; }
 
 sanitize_name() { basename "$1" | tr "./" "__"; }
 
 is_git_work_tree_root() {
-    [ "$(git -C "${1:-$(pwd)}" rev-parse --is-inside-work-tree)" = "true" ] &&
-        [ "$(git -C "${1:-$(pwd)}" rev-parse --show-toplevel)" = "${1:-$(pwd)}" ]
+    [ "$(git -C "${1:-$PWD}" rev-parse --is-inside-work-tree)" = "true" ] &&
+        [ "$(git -C "${1:-$PWD}" rev-parse --show-toplevel)" = "${1:-$PWD}" ]
 }
 
 is_git_bare_repo_root() {
-    git_dir="$(git -C "${1:-$(pwd)}" rev-parse --path-format=relative --git-dir)"
-    [ "$(git -C "${1:-$(pwd)}" rev-parse --is-bare-repository)" = "true" ] &&
+    git_dir="$(git -C "${1:-$PWD}" rev-parse --path-format=relative --git-dir)"
+    [ "$(git -C "${1:-$PWD}" rev-parse --is-bare-repository)" = "true" ] &&
         [ "${git_dir#*"/"}" = "$git_dir" ]
 }
 
 is_git_root_dir() {
-    is_git_work_tree_root "${1:-$(pwd)}" || is_git_bare_repo_root "${1:-$(pwd)}"
+    is_git_work_tree_root "${1:-$PWD}" || is_git_bare_repo_root "${1:-$PWD}"
 }
 
 # tmux utils from https://github.com/thoughtbot/dotfiles/blob/main/bin/tat
@@ -265,7 +265,7 @@ bare_clone() {
     mkdir -p "$new_repo_dir"
     cd "$new_repo_dir" || return
 
-    log "INFO " "clone > cloning bare repo for \"$1\" in \"$(pwd)\""
+    log "INFO " "clone > cloning bare repo for \"$1\" in \"$PWD\""
     git clone --bare "$1" .git >&2
     git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*" >&2
     git fetch origin >&2
@@ -286,7 +286,7 @@ bare_clone() {
 # --------------------------------------------------------------------- {|}
 
 project_create_if_needed_and_attach() {
-    project_path="${1:-$(pwd)}"
+    project_path="${1:-$PWD}"
     project_name="$(sanitize_name "$project_path")"
     project_info="\"$project_name\" at path \"$project_path\""
 
@@ -356,7 +356,7 @@ find_project_directory() {
         log "DEBUG" "task > currently in home session, interactively selecting a project"
         select_project && return
     else
-        log "DEBUG" "task > using current directory as project: \"$(pwd)\""
+        log "DEBUG" "task > using current directory as project: \"$PWD\""
         pwd
     fi
 }
