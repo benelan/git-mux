@@ -363,10 +363,9 @@ handle_project() {
 
         if use_wezterm; then
             # if stdin is a tty, we can use GIT_MUX_SELECT_CMD to select a
-            # project. Otherwise use wezterm's builtin InputSelector. To always
-            # use InputSelector, set GIT_MUX_SELECT_CMD=wezterm
+            # project. Otherwise use wezterm's builtin InputSelector.
             # https://wezfurlong.org/wezterm/config/lua/keyassignment/InputSelector.html?h=input
-            if stdin_is_a_tty && [ "$GIT_MUX_SELECT_CMD" != "wezterm" ]; then
+            if stdin_is_a_tty; then
                 wezterm_set_user_var git-mux "project $(select_project)"
             else
                 wezterm_set_user_var git-mux project
@@ -383,12 +382,12 @@ handle_project() {
 
 # Determines the absolute path of the selected or provided project.
 find_project_directory() {
-    log "DEBUG" "task > checking project names for a match with the tmux session: \"$GIT_MUX_TMUX_SESSION\""
+    log "DEBUG" "task > checking project names for a match with the tmux session: \"$GIT_MUX_CURRENT_PROJECT\""
     # check if the tmux session name is one of the projects
     for project in $GIT_MUX_ALL_PROJECTS; do
         if [ "$(
             sanitize_name "$(basename "$project")"
-        )" = "$GIT_MUX_TMUX_SESSION" ]; then
+        )" = "$GIT_MUX_CURRENT_PROJECT" ]; then
             log "DEBUG" "task > found a matching project: \"$project\""
             echo "$project"
 
@@ -398,7 +397,7 @@ find_project_directory() {
     done
 
     log "WARN " "task > no matching project found"
-    if [ "$(sanitize_name "$(basename ~)")" = "$GIT_MUX_TMUX_SESSION" ]; then
+    if [ "$(sanitize_name "$(basename ~)")" = "$GIT_MUX_CURRENT_PROJECT" ]; then
         log "DEBUG" "task > currently in home session, interactively selecting a project"
         select_project && return
     else
@@ -438,32 +437,74 @@ handle_task() {
     fi
     log "DEBUG" "task > args: $*"
 
-    if ! has_tmux_server; then
+    if ! use_wezterm && ! has_tmux_server; then
         error "tmux server not found. Make sure a project is open before selecting a task."
     fi
 
-    GIT_MUX_TMUX_SESSION="$(tmux display-message -p "#S")"
+    if use_wezterm; then
+        GIT_MUX_CURRENT_PROJECT="$(wezterm cli list |
+            awk -v pane="$WEZTERM_PANE" '$3 == pane {print $4}')"
+    else
+        GIT_MUX_CURRENT_PROJECT="$(tmux display-message -p "#S")"
+    fi
 
     # Use arg1 for the task if it is a valid directory.
     # Otherwise assume it is a git branch name.
     if [ -n "$1" ] && [ -d "$1" ]; then
-        task_dir="$(absolute_path "$1")"
-        task_name="${2:-"$(sanitize_name "$task_dir")"}"
+        if use_wezterm; then
+            handle_wezterm_task "$@"
+        else
+            handle_tmux_task "$@"
+        fi
     else
         handle_git_task "$@"
-        return 0
+    fi
+}
+
+handle_wezterm_task() {
+    task_dir="$(absolute_path "$1")"
+    task_name="${2:-"$(sanitize_name "$task_dir")"}"
+    task_data="$(wezterm cli list --format json |
+        jq ".[] | select(.tab_title==\"$task_name\")")"
+
+    if [ -z "$task_data" ]; then
+        pane_id="$(wezterm cli spawn --cwd "$task_dir")"
+        wezterm cli set-tab-title --pane-id "$pane_id" "$task_name"
+    else
+        pane_id=$(echo "$task_data" | jq -r "select(.is_active==true) | .pane_id")
     fi
 
-    log "INFO " "task > creating new \"$task_name\" task in \"$task_dir\""
+    # if provided, execute commands in the mux tab for new worktrees
+    if [ -n "$GIT_MUX_NEW_WORKTREE" ] && [ -n "$GIT_MUX_NEW_WORKTREE_CMD" ]; then
+        log "INFO " "task > executing new git worktree command: \"$GIT_MUX_NEW_WORKTREE_CMD\""
+        wezterm cli send-text --no-paste --pane-id "$pane_id" "$GIT_MUX_NEW_WORKTREE_CMD\n"
+    fi
+
+    if [ -n "$3" ]; then
+        shift 2
+        log "INFO " "task > executing command (not activating wezterm tab): \"$*\""
+        wezterm cli send-text --no-paste --pane-id "$pane_id" "$*\n"
+    else
+        wezterm cli activate-pane --pane-id "$pane_id"
+    fi
+
+    unset task_name task_dir
+}
+
+handle_tmux_task() {
+    task_dir="$(absolute_path "$1")"
+    task_name="${2:-"$(sanitize_name "$task_dir")"}"
+
     # Not using new-window's -S flag for backwards compatibility
     if ! tmux list-windows | grep -q "$task_name"; then
+        log "INFO " "task > creating new \"$task_name\" task in \"$task_dir\""
         tmux new-window -dn "$task_name" -c "$task_dir"
     fi
 
     # if provided, execute commands in the tmux window for new worktrees
     if [ -n "$GIT_MUX_NEW_WORKTREE" ] && [ -n "$GIT_MUX_NEW_WORKTREE_CMD" ]; then
         log "INFO " "task > executing new git worktree command: \"$GIT_MUX_NEW_WORKTREE_CMD\""
-        tmux send-keys -t "$GIT_MUX_TMUX_SESSION:$task_name" "$GIT_MUX_NEW_WORKTREE_CMD" Enter
+        tmux send-keys -t "$GIT_MUX_CURRENT_PROJECT:$task_name" "$GIT_MUX_NEW_WORKTREE_CMD" Enter
         unset GIT_MUX_NEW_WORKTREE
     fi
 
@@ -471,13 +512,13 @@ handle_task() {
     if [ -n "$3" ]; then
         shift 2
         log "INFO " "task > executing command (not attaching/switching tmux windows): \"$*\""
-        tmux send-keys -t "$GIT_MUX_TMUX_SESSION:$task_name" "$*" Enter
+        tmux send-keys -t "$GIT_MUX_CURRENT_PROJECT:$task_name" "$*" Enter
     elif [ -n "$TMUX" ]; then
         log "INFO " "task > switching tmux client"
-        tmux switch-client -t "$GIT_MUX_TMUX_SESSION:$task_name"
+        tmux switch-client -t "$GIT_MUX_CURRENT_PROJECT:$task_name"
     else
         log "INFO " "task > attaching to tmux session"
-        tmux attach -t "$GIT_MUX_TMUX_SESSION:$task_name"
+        tmux attach -t "$GIT_MUX_CURRENT_PROJECT:$task_name"
     fi
 
     unset task_name task_dir
