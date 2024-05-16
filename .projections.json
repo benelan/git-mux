@@ -7,7 +7,7 @@
     "alternate": "docs/git-mux.1.txt"
   },
   "docs/git-mux.1.txt": {
-    "type": "docs",
+    "type": "doc",
     "alternate": "docs/MANUAL.md"
   },
   "docs/MANUAL.md": {
