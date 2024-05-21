@@ -31,23 +31,24 @@ GIT_MUX_VERSION="0.3.0" # x-release-please-version
 # Configuration                                                         {{{
 # --------------------------------------------------------------------- {|}
 
-rtfm() { echo "See the ENVIRONMENT section of \`man git mux\` for details."; }
+has() { command -v "$1" >/dev/null 2>&1; }
 
-if [ -z "$GIT_MUX_SELECT_CMD" ] && ! command -v fzf >/dev/null 2>&1; then
-    printf "%s\n%s\n%s\n" \
+if [ -z "$GIT_MUX_SELECT_CMD" ] && ! has fzf; then
+    printf "%s\n%s\n\n%s\n" \
         "Error: install fzf or specify a different method for" \
         "selection with the GIT_MUX_SELECT_CMD environment variable." \
-        "$(rtfm)" >&2
+        "See the ENVIRONMENT section of \`man git mux\` for details." >&2
     exit 1
 fi
 
 GIT_MUX_SELECT_CMD=${GIT_MUX_SELECT_CMD:-fzf}
 
 if [ -z "$GIT_MUX_PROJECTS" ] && [ -z "$GIT_MUX_PROJECT_PARENTS" ]; then
-    printf "%s\n%s\n%s\n" \
-        "Error: specifying your projects using the GIT_MUX_PROJECTS and/or" \
-        "GIT_MUX_PROJECT_PARENTS environment variables is required." \
-        "$(rtfm)" >&2
+    printf "%s\n%s\n\n%s\n%s\n" \
+        "Error: missing required environment variable(s) for specifying your" \
+        "project directories: \`GIT_MUX_PROJECTS\` and/or \`GIT_MUX_PROJECT_PARENTS\`." \
+        "See the Configuration section of \`git mux -h\` for a concise description," \
+        "or the ENVIRONMENT section of \`man git mux\` for more detail." >&2
     exit 1
 fi
 
@@ -220,8 +221,6 @@ log() {
 # Util functions                                                        {{{
 # --------------------------------------------------------------------- {|}
 
-has() { command -v "$1" >/dev/null 2>&1; }
-
 arg_is_flag() { case $1 in -*) true ;; *) false ;; esac }
 
 absolute_path() { [ -d "$1" ] && cd "$1" && echo "$PWD"; }
@@ -286,7 +285,7 @@ wezterm_set_user_var() {
 # https://git-scm.com/docs/git-worktree
 bare_clone() {
     if arg_is_flag "$1" || arg_is_flag "$2"; then
-        error "invalid argument(s) for clone command: \"$*\""
+        error "clone > invalid argument(s): \"$*\""
     fi
 
     new_repo_dir="${2:-"$(basename "$1" .git)"}"
@@ -347,7 +346,7 @@ select_project() { printf "%s\n" $GIT_MUX_ALL_PROJECTS | $GIT_MUX_SELECT_CMD; }
 # Otherwise select a project from the directories added to the config.
 handle_project() {
     if arg_is_flag "$1"; then
-        error "invalid argument for project command: \"$*\""
+        error "project > invalid first argument, it must be a path to a project: \"$1\""
     fi
 
     if [ -n "$1" ] && [ -d "$1" ]; then
@@ -441,12 +440,12 @@ select_branch() {
 # argument is provided it prompts to select an existing branch.
 handle_task() {
     if arg_is_flag "$1" || arg_is_flag "$2"; then
-        error "invalid argument(s) for task command: \"$*\""
+        error "task > invalid argument(s): \"$*\""
     fi
     log "DEBUG" "task > args: $*"
 
     if ! use_wezterm && ! has_tmux_server; then
-        error "tmux server not found. Make sure a project is open before selecting a task."
+        error "task > tmux server not found. Make sure a project is open before selecting a task."
     fi
 
     if use_wezterm; then
