@@ -361,17 +361,25 @@ handle_project() {
     else
         log "DEBUG" "project > a valid path was not provided, interactively selecting a project"
 
-        if use_wezterm; then
-            # if stdin is a tty, we can use GIT_MUX_SELECT_CMD to select a
-            # project. Otherwise use wezterm's builtin InputSelector.
+        if use_wezterm && ! stdin_is_a_tty; then
+            # Use use Wezterm's builtin InputSelector if stdin is not a tty.
             # https://wezfurlong.org/wezterm/config/lua/keyassignment/InputSelector.html?h=input
-            if stdin_is_a_tty; then
-                wezterm_set_user_var git-mux "project $(select_project)"
-            else
-                wezterm_set_user_var git-mux project
-            fi
+            wezterm_set_user_var git-mux project
+            exit 0
+        fi
+
+        selected_project="$(select_project)"
+        selection_exit_code=$?
+
+        if [ $selection_exit_code -ne 0 ] || [ -z "$selected_project" ]; then
+            log "WARN" "project > selection was canceled or failed"
+            exit $selection_exit_code
+        fi
+
+        if use_wezterm; then
+            wezterm_set_user_var git-mux "project $selected_project"
         else
-            project_create_if_needed_and_attach "$(select_project)"
+            project_create_if_needed_and_attach "$selected_project"
         fi
     fi
 }
