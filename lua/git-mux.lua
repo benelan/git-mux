@@ -1,6 +1,16 @@
+---To setup the Wezterm integration for `git-mux`, first clone this repo to `~/.git-mux`. Then, add the following to your Wezterm config:
+---```lua
+---package.path = wezterm.home_dir .. "/.git-mux/lua/?.lua;" ..  package.path
+---require("git-mux").setup()
+---```
+---The Wezterm type definitions used in this module are from <https://github.com/benelan/wezterm-types>.
+---@author Ben Elan
+---@license MIT
+---@module 'git-mux'
+local M = {}
+
 ---@type Wezterm
 local wezterm = require("wezterm")
-local M = {}
 
 ---Equivalent to POSIX basename(3)
 ---Given "/foo/bar" returns "bar"
@@ -12,17 +22,30 @@ local function basename(path)
   return name
 end
 
---- Switch to a project (Wezterm workspace) directly or select one interactively if a path is omitted.
+---Switch to a project (Wezterm workspace) directly or select one interactively if a path is omitted.
+---
+---This function can be called from a Wezterm keybinding, for example navigating to a path saved in an environment variable:
+---```lua
+---{
+---  key = "n",
+---  mods = "LEADER|CTRL",
+---  action = wezterm.action_callback(
+---    function(window, pane)
+---      require("git-mux").project(window, pane, { path = os.getenv("NOTES") })
+---    end
+---  ),
+---}
+---```
 ---@param window Window the current Wezterm window
 ---@param pane Pane the current Wezterm pane
----@param params { path?: string, args?: table<string> } | nil The path to the project and a command to run when spawning a Wezterm workspace.
-M.project = function(window, pane, params)
-  if not params or not params.path then
+---@param opts { path?: string, args?: table<string> } | nil The path to the project and a command to run when spawning a Wezterm workspace.
+M.project = function(window, pane, opts)
+  if not opts or not opts.path then
     M.select_project(window, pane)
     return
   end
 
-  local name = basename(params.path)
+  local name = basename(opts.path)
   wezterm.GLOBAL.git_mux_previous_project = wezterm.mux.get_active_workspace()
 
   window:perform_action(
@@ -30,8 +53,8 @@ M.project = function(window, pane, params)
       name = name,
       spawn = {
         label = "Project: " .. name,
-        cwd = params.path,
-        args = params.args,
+        cwd = opts.path,
+        args = opts.args,
       },
     }),
     pane
@@ -50,10 +73,19 @@ M.project = function(window, pane, params)
     wezterm.GLOBAL.git_mux_pane_id = nil
   end
 
-  wezterm.log_info(string.format('git-mux > switched to project "%s"', params.path))
+  wezterm.log_info(string.format('git-mux > switched to project "%s"', opts.path))
 end
 
 ---Interactively select a project. See the ENVIRONMENT section of `man git-mux` for info about defining the projects list.
+---
+---This function can be called from a Wezterm keybinding, for example:
+---```lua
+---{
+---  key = "p",
+---  mods = "LEADER|CTRL",
+---  action = wezterm.action_callback(require("git-mux").select_project),
+---}
+---```
 ---@param window Window The current Wezterm window
 ---@param pane Pane the current Wezterm pane
 ---@param args? table<string> A command and its arguments to run when spawning a Wezterm workspace. If omitted, the default program for the target domain will be spawned.
@@ -108,8 +140,8 @@ M.select_project = function(window, pane, args)
   )
 end
 
----Setup a "user-var-changed" listener so the project (Wezterm workspace) can be switched from the git-mux shell script.
----@see issue: https://github.com/wez/wezterm/issues/3542
+---Setup a `user-var-changed` listener so the project (Wezterm workspace) can be switched from the `git-mux` shell script.
+---For info about why this is necessary, see <https://github.com/wez/wezterm/issues/3542>.
 M.setup = function()
   wezterm.on("user-var-changed", function(window, pane, name, value)
     if name ~= "git-mux" then
