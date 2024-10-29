@@ -471,8 +471,13 @@ handle_task() {
 handle_wezterm_task() {
     task_dir="$(absolute_path "$1")"
     task_name="${2:-"$(sanitize_name "$task_dir")"}"
-    task_data="$(wezterm cli list --format json |
-        jq ".[] | select(.tab_title==\"$task_name\")")"
+    task_data="$(
+        wezterm cli list --format json |
+            jq ".[] | select(
+                .tab_title==\"$task_name\" and
+                .workspace==\"$GIT_MUX_CURRENT_PROJECT\"
+            )"
+    )"
 
     if [ -z "$task_data" ]; then
         pane_id="$(wezterm cli spawn --cwd "$task_dir")"
