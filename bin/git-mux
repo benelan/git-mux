@@ -484,13 +484,15 @@ handle_wezterm_task() {
     # if provided, execute commands in the mux tab for new worktrees
     if [ -n "$GIT_MUX_NEW_WORKTREE" ] && [ -n "$GIT_MUX_NEW_WORKTREE_CMD" ]; then
         log "INFO " "task > executing new git worktree command: \"$GIT_MUX_NEW_WORKTREE_CMD\""
-        wezterm cli send-text --no-paste --pane-id "$pane_id" "$GIT_MUX_NEW_WORKTREE_CMD\n"
+        wezterm cli send-text --no-paste --pane-id "$pane_id" "$GIT_MUX_NEW_WORKTREE_CMD
+"
     fi
 
     if [ -n "$3" ]; then
         shift 2
         log "INFO " "task > executing command (not activating wezterm tab): \"$*\""
-        wezterm cli send-text --no-paste --pane-id "$pane_id" "$*\n"
+        wezterm cli send-text --no-paste --pane-id "$pane_id" "$*
+"
     else
         wezterm cli activate-pane --pane-id "$pane_id"
     fi
