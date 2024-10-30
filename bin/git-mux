@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -e
 
-# A git + tmux lovechild for blazingly fast movement between projects and tasks
+# A git + tmux (or wezterm) lovechild for blazingly fast movement between projects and tasks
 # Source: https://github.com/benelan/gh-fzf
 #
 # MIT License
@@ -54,7 +54,7 @@ fi
 
 GIT_MUX_ALL_PROJECTS="${GIT_MUX_PROJECTS} $(
     # The following mess is a compliant solution to:
-    # find $GIT_MUX_PROJECT_PARENTS -maxdepth 1 -mindepth 1 -type d
+    # $ find $GIT_MUX_PROJECT_PARENTS -maxdepth 1 -mindepth 1 -type d
     for project_parent_dir in ${GIT_MUX_PROJECT_PARENTS:-$PROJECTS}; do
         for project_dir in "$project_parent_dir"/*; do
             if [ -d "$project_dir" ]; then
@@ -99,12 +99,12 @@ Homepage: https://github.com/benelan/git-mux
 %s
 
 Commands:
-  c,  clone       Clone and configure a bare git repo for use with worktrees.
-  p,  project     Create and/or switch to a project (tmux session).
-                  Projects are usually a git repo, but any directory is valid.
-  t,  task        Create, switch, or send text to a task (tmux window).
-                  Tasks are usually a git worktree or branch (not required).
-  h,  help        Show a concise help message or the man page, respectively.
+  c, clone    Clone and configure a bare git repo for use with worktrees
+  p, project  Create and/or switch to a project (tmux session|wezterm workspace)
+              Projects are usually a git repo, but any directory is valid
+  t, task     Create, switch, or send text to a task (tmux window|wezterm tab)
+              Tasks are usually a git worktree or branch (not required)
+  h, help     Show a concise help message or the man page, respectively
 
 Configuration:
   See the ENVIRONMENT section of \`man git mux\` for all options. At least one
@@ -119,14 +119,14 @@ Configuration:
     child directories (depth=1) of each parent are used for fuzzy selection.
 
 Examples:
-  # Select a project then create and/or switch to its tmux session.
+  # Select a project then create and/or switch to its session or workspace.
   git mux p
 
   # Create and/or switch to a project directly (useful for a keymap/alias).
   git mux project ~/dev/work/acme-app
 
-  # Create and/or switch to a tmux window named \"123\" via basename(1).
-  # Start the window in \"feature/123\" if it is a valid directory.
+  # Create and/or switch to a task (window or tab) named \"123\" via basename(1).
+  # Start the task in \"feature/123\" if it is a valid directory.
   # Otherwise assume it is a git branch name. Create and/or switch to the
   # git worktree if the project is a bare repo, otherwise checkout the branch.
   git mux task feature/123
@@ -134,7 +134,7 @@ Examples:
   # Select an existing branch for the task (using fzf by default).
   git mux t
 
-  # Run commands in a tmux window named 'tests' without switching to it.
+  # Run commands in a window or tab named 'tests' without switching to it.
   git mux task packages/cli tests npm i && npm test
 " "$usage" >&2
     exit 0
@@ -491,6 +491,7 @@ handle_wezterm_task() {
         log "INFO " "task > executing new git worktree command: \"$GIT_MUX_NEW_WORKTREE_CMD\""
         wezterm cli send-text --no-paste --pane-id "$pane_id" "$GIT_MUX_NEW_WORKTREE_CMD
 "
+        unset GIT_MUX_NEW_WORKTREE
     fi
 
     if [ -n "$3" ]; then
