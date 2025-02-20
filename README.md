@@ -42,7 +42,7 @@ This allows you to easily update the script with a single command (e.g.,
 
 ```sh
 git clone -b stable https://github.com/benelan/git-mux.git ~/.git-mux
-echo 'export PATH="$PATH:~/.git-mux/bin"' >> ~/.bashrc && bash -l
+echo 'export PATH="$PATH:~/.git-mux/bin"' >>~/.bashrc && bash -l
 ```
 
 To uninstall, remove `~/.git-mux` and the `PATH` addition line in `~/.bashrc`.
@@ -101,11 +101,11 @@ navigation.
 
 ```sh
 %if #{>=:#{version},3.2}
-    bind C-p popup -E -E git-mux project
-    bind C-t popup -E -E git-mux task
+  bind C-p popup -E -E git-mux project
+  bind C-t popup -E -E git-mux task
 %else
-    bind C-p new-window -c "#{pane_current_path}" git-mux project
-    bind C-t new-window -c "#{pane_current_path}" git-mux task
+  bind C-p new-window -c "#{pane_current_path}" git-mux project
+  bind C-t new-window -c "#{pane_current_path}" git-mux task
 %endif
 
 bind C-n run "git-mux project ~/dev/notes"

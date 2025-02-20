@@ -99,43 +99,43 @@ Homepage: https://github.com/benelan/git-mux
 %s
 
 Commands:
-  c, clone    Clone and configure a bare git repo for use with worktrees
-  p, project  Create and/or switch to a project (tmux session|wezterm workspace)
-              Projects are usually a git repo, but any directory is valid
-  t, task     Create, switch, or send text to a task (tmux window|wezterm tab)
-              Tasks are usually a git worktree or branch (not required)
-  h, help     Show a concise help message or the man page, respectively
+    c, clone    Clone and configure a bare git repo for use with worktrees
+    p, project  Create and/or switch to a project (tmux session|wezterm workspace)
+                Projects are usually a git repo, but any directory is valid
+    t, task     Create, switch, or send text to a task (tmux window|wezterm tab)
+                Tasks are usually a git worktree or branch (not required)
+    h, help     Show a concise help message or the man page, respectively
 
 Configuration:
-  See the ENVIRONMENT section of \`man git mux\` for all options. At least one
-  of the following environment variables is required to set the project paths.
-  The paths must be absolute or start with '~' and cannot contain spaces.
+    See the ENVIRONMENT section of \`man git mux\` for all options. At least one
+    of the following environment variables is required to set the project paths.
+    The paths must be absolute or start with '~' and cannot contain spaces.
 
-  GIT_MUX_PROJECTS
-    Space delimited list of individual project directories for fuzzy selection.
+    GIT_MUX_PROJECTS
+        Space delimited list of individual project directories for fuzzy selection.
 
-  GIT_MUX_PROJECT_PARENTS
-    Space delimited list of directories that contain projects. The immediate
-    child directories (depth=1) of each parent are used for fuzzy selection.
+    GIT_MUX_PROJECT_PARENTS
+        Space delimited list of directories that contain projects. The immediate
+        child directories (depth=1) of each parent are used for fuzzy selection.
 
 Examples:
-  # Select a project then create and/or switch to its session or workspace.
-  git mux p
+    # Select a project then create and/or switch to its session or workspace.
+    git mux p
 
-  # Create and/or switch to a project directly (useful for a keymap/alias).
-  git mux project ~/dev/work/acme-app
+    # Create and/or switch to a project directly (useful for a keymap/alias).
+    git mux project ~/dev/work/acme-app
 
-  # Create and/or switch to a task (window or tab) named \"123\" via basename(1).
-  # Start the task in \"feature/123\" if it is a valid directory.
-  # Otherwise assume it is a git branch name. Create and/or switch to the
-  # git worktree if the project is a bare repo, otherwise checkout the branch.
-  git mux task feature/123
+    # Create and/or switch to a task (window or tab) named \"123\" via basename(1).
+    # Start the task in \"feature/123\" if it is a valid directory.
+    # Otherwise assume it is a git branch name. Create and/or switch to the
+    # git worktree if the project is a bare repo, otherwise checkout the branch.
+    git mux task feature/123
 
-  # Select an existing branch for the task (using fzf by default).
-  git mux t
+    # Select an existing branch for the task (using fzf by default).
+    git mux t
 
-  # Run commands in a window or tab named 'tests' without switching to it.
-  git mux task packages/cli tests npm i && npm test
+    # Run commands in a window or tab named 'tests' without switching to it.
+    git mux task packages/cli tests npm i && npm test
 " "$usage" >&2
     exit 0
 }
@@ -490,7 +490,7 @@ handle_wezterm_task() {
     if [ -n "$GIT_MUX_NEW_WORKTREE" ] && [ -n "$GIT_MUX_NEW_WORKTREE_CMD" ]; then
         log "INFO " "task > executing new git worktree command: \"$GIT_MUX_NEW_WORKTREE_CMD\""
         wezterm cli send-text --no-paste --pane-id "$pane_id" "$GIT_MUX_NEW_WORKTREE_CMD
-"
+        "
         unset GIT_MUX_NEW_WORKTREE
     fi
 
@@ -498,7 +498,7 @@ handle_wezterm_task() {
         shift 2
         log "INFO " "task > executing command (not activating wezterm tab): \"$*\""
         wezterm cli send-text --no-paste --pane-id "$pane_id" "$*
-"
+        "
     else
         wezterm cli activate-pane --pane-id "$pane_id"
     fi

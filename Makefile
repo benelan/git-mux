@@ -50,7 +50,7 @@ format:
 		prettier --write --log-level warn {README,CONTRIBUTING,{docs,.github}/**/*}.{md,yml}
 	command -v shfmt >/dev/null 2>&1 && \
 		shfmt --posix --indent 4 --case-indent --write $(BINFILE)
-	 command -v shellcheck >/dev/null 2>&1 && \
+	command -v shellcheck >/dev/null 2>&1 && \
 		shellcheck --format=diff $(BINFILE) | git apply --allow-empty
 	command -v markdownlint >/dev/null 2>&1 && \
 		markdownlint . --ignore CHANGELOG.md --fix >/dev/null 2>&1 || true
