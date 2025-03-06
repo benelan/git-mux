@@ -1,6 +1,6 @@
 # git mux
 
-A git + tmux lovechild for blazingly fast movement between projects and tasks.
+A git + tmux (or wezterm) lovechild for blazingly fast movement between projects and tasks.
 
 > **NOTE:** the README is a WIP; [RTFM](./docs/MANUAL.md).
 
@@ -15,7 +15,10 @@ Use one of the following methods to install `git-mux`.
 
 ### `curl`
 
-The **recommended** way to install `git-mux` is by using `curl` or `wget` to download
+> [!WARNING]
+> This install method will not work for Wezterm users.
+
+The **recommended** way to install `git-mux` for tmux users is by using `curl` or `wget` to download
 the executable and `man` page to somewhere on your `$PATH`. For example, with
 `curl`:
 
@@ -76,6 +79,18 @@ pushd ~/.git-mux && make uninstall PREFIX=~/.local && popd && rm -rf ~/.git-mux
 
 See `man git-mux` in the terminal, or the [markdown version](./docs/MANUAL.md)
 in the browser.
+
+### Terminology
+
+#### project
+
+A project is a tmux session or wezterm workspace. Projects can be any directory, but they are
+usually the root of a git repository.
+
+#### task
+
+A task is a tmux window or wezterm tab. Tasks can be a subdirectory of a project (e.g.
+`packages/ui-components`), a command (e.g. `npm install`), or a git worktree/branch.
 
 ## Tips
 
