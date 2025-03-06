@@ -257,7 +257,7 @@ has_tmux_server() { tmux run 2>/dev/null; }
 # Set GIT_MUX_MULTIPLEXER="wezterm" to use wezterm even whena attached to tmux.
 use_wezterm() {
     has wezterm && [ -n "$WEZTERM_PANE" ] && [ "$GIT_MUX_MULTIPLEXER" != "tmux" ] &&
-        ([ "$GIT_MUX_MULTIPLEXER" = "wezterm" ] || ! in_tmux)
+        { [ "$GIT_MUX_MULTIPLEXER" = "wezterm" ] || ! in_tmux; }
 }
 
 # https://github.com/wez/wezterm/blob/main/assets/shell-integration/wezterm.sh
