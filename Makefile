@@ -46,14 +46,14 @@ doc: docs/$(PROGRAM).1.txt
 # https://github.com/koalaman/shellcheck
 # https://github.com/igorshubovych/markdownlint-cli
 format:
-	command -v prettier >/dev/null 2>&1 && \
-		prettier --write --log-level warn {README,CONTRIBUTING,{docs,.github}/**/*}.{md,yml}
 	command -v shfmt >/dev/null 2>&1 && \
 		shfmt --posix --indent 4 --case-indent --write $(BINFILE)
 	command -v shellcheck >/dev/null 2>&1 && \
 		shellcheck --format=diff $(BINFILE) | git apply --allow-empty
 	command -v markdownlint >/dev/null 2>&1 && \
 		markdownlint . --ignore CHANGELOG.md --fix >/dev/null 2>&1 || true
+	command -v prettier >/dev/null 2>&1 && \
+		prettier --write --log-level warn **/*.{md,yml}
 
 lint:
 	command -v shellcheck >/dev/null 2>&1 && shellcheck $(BINFILE)

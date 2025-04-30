@@ -259,7 +259,7 @@ Try these troubleshooting tips if you are experiencing issues:
 If none of the troubleshooting steps helped resolve the issue, please
 submit an issue on GitHub:
 
-*<https://github.com/benelan/git-mux/issues>*
+_<https://github.com/benelan/git-mux/issues>_
 
 ## COMPATIBILITY
 
