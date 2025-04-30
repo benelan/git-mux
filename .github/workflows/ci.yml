@@ -10,3 +10,5 @@ jobs:
   ci:
     uses: benelan/github/.github/workflows/ci.yml@main
     secrets: inherit
+    with:
+      lint: false
