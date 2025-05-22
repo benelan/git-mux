@@ -162,4 +162,9 @@ M.setup = function()
   end)
 end
 
+M.apply_to_config = function(config, options)
+  M.setup()
+  return config
+end
+
 return M
